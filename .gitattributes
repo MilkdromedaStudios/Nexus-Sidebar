@@ -1,0 +1,4 @@
+* text=auto eol=lf
+
+# Auto-merge docs by concatenating non-overlapping changes
+*.md merge=union
