@@ -138,3 +138,15 @@ If something does not show up correctly:
 ## 📌 Version
 
 Current extension version in manifest: **1.0.0**.
+
+---
+
+## 📝 Change Log (Quick)
+
+- **2026-04-20 — v1.1.0**
+  - Added guided welcome flow with keyboard navigation and language selection.
+  - Added Simplified Chinese (`zh-CN`) support (initial scope).
+  - Added background media activity monitor + notification support.
+  - Added onboarding redirect from popup for first-time users.
+
+For full release history, see `CHANGELOG.md`.
