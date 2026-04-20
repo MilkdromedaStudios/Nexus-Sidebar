@@ -20,6 +20,8 @@
   "host_permissions": [
     "https://api.openweathermap.org/*",
     "https://wttr.in/*",
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
     "https://rss.app/*",
     "https://feeds.feedburner.com/*",
     "https://api.rss2json.com/*"
