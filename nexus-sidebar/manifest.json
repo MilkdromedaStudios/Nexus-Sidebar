@@ -1,0 +1,95 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Sidebar – Ultimate Productivity Hub",
+  "short_name": "Nexus",
+  "version": "1.0.0",
+  "description": "The ultimate productivity sidebar for Opera GX & Chrome. 15+ widgets, 10 themes, 110+ settings. Todo, Notes, Pomodoro, Weather, Calendar, Habits, Calculator, and much more.",
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "notifications",
+    "bookmarks",
+    "tabs",
+    "alarms",
+    "contextMenus",
+    "scripting"
+  ],
+  "optional_permissions": [
+    "geolocation"
+  ],
+  "host_permissions": [
+    "https://api.openweathermap.org/*",
+    "https://wttr.in/*",
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://rss.app/*",
+    "https://feeds.feedburner.com/*",
+    "https://api.rss2json.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidebar/sidebar.html"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.svg",
+      "32": "icons/icon32.svg",
+      "48": "icons/icon48.svg",
+      "128": "icons/icon128.svg"
+    },
+    "default_title": "Open Nexus Sidebar"
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "32": "icons/icon32.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "themes/*",
+        "assets/*",
+        "fonts/*",
+        "sidebar/*",
+        "widgets/*",
+        "libs/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Toggle Nexus Sidebar"
+    },
+    "open-todo": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+T"
+      },
+      "description": "Open Todo Widget"
+    },
+    "open-notes": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+N"
+      },
+      "description": "Open Notes Widget"
+    },
+    "open-pomodoro": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P"
+      },
+      "description": "Open Pomodoro Timer"
+    }
+  }
+}
