@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Nexus Welcome</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Syne:wght@800&display=swap" rel="stylesheet"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:linear-gradient(135deg,#0d0d14 0%,#1a0a2e 50%,#0d0d14 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;color:#e8e8f0;padding:20px;}
+  .card{background:#1e1e2e;border:1px solid rgba(108,99,255,0.25);border-radius:24px;padding:42px 36px;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  h1{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;line-height:1;background:linear-gradient(135deg,#6C63FF,#FF6B9D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px}
+  .subtitle{color:#a6a6c0;font-size:15px;line-height:1.7;margin-bottom:24px}
+  .step{display:none;animation:fade .24s ease}
+  .step.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .lang-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+  .lang-btn{background:#121225;border:1px solid rgba(255,255,255,0.1);color:#e8e8f0;border-radius:12px;padding:12px;cursor:pointer;font-size:14px;font-weight:700}
+  .lang-btn.active{border-color:#6C63FF;background:rgba(108,99,255,.18)}
+  .arrow-hint{font-size:12px;color:#8f8faa;margin-top:8px}
+  .steps{margin:16px 0 24px}
+  .s-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+  .dot{width:24px;height:24px;border-radius:999px;background:linear-gradient(135deg,#6C63FF,#FF6B9D);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+  .txt{font-size:14px;color:#d7d7e6;line-height:1.5}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:10px}
+  button{border:none;border-radius:12px;padding:11px 16px;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:700}
+  .ghost{background:#2a2a3b;color:#d3d3e5}
+  .primary{background:linear-gradient(135deg,#6C63FF,#FF6B9D);color:white}
+  .foot{font-size:11px;color:#777795;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="stepWelcome" class="step active">
+    <h1>WELCOME</h1>
+    <p class="subtitle">Nexus Sidebar setup starts here. Press the <b>→ Right Arrow</b> key or click <b>Next</b> to choose your language.</p>
+    <div class="arrow-hint">Tip: language can be changed anytime in Settings.</div>
+  </div>
+
+  <div id="stepLang" class="step">
+    <h1>Language</h1>
+    <p class="subtitle">Choose your interface language. Current update adds Simplified Chinese support.</p>
+    <div class="lang-grid">
+      <button class="lang-btn active" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="zh-CN">简体中文</button>
+    </div>
+  </div>
+
+  <div id="stepTour" class="step">
+    <h1 id="tourTitle">Get Started</h1>
+    <p class="subtitle" id="tourSub">Quick way to activate and use Nexus.</p>
+    <div class="steps">
+      <div class="s-row"><div class="dot">1</div><div class="txt" id="t1">Click the extension icon, then open the sidebar.</div></div>
+      <div class="s-row"><div class="dot">2</div><div class="txt" id="t2">Press ⋯ More to pin your favorite panels.</div></div>
+      <div class="s-row"><div class="dot">3</div><div class="txt" id="t3">Open ⚙️ Settings to customize theme, language, and behavior.</div></div>
+    </div>
+    <p class="foot" id="note">Media note: browser security does not allow hidden playback from closed tabs. Nexus can monitor active audio tabs and notify you.</p>
+  </div>
+
+  <div class="actions">
+    <button class="ghost" id="backBtn">Back</button>
+    <button class="primary" id="nextBtn">Next →</button>
+  </div>
+</div>
+
+<script>
+  let step = 0;
+  const steps = [document.getElementById('stepWelcome'), document.getElementById('stepLang'), document.getElementById('stepTour')];
+  let selectedLang = 'en';
+
+  const I18N = {
+    en: {
+      tourTitle: 'Get Started',
+      tourSub: 'Quick way to activate and use Nexus.',
+      t1: 'Click the extension icon, then open the sidebar.',
+      t2: 'Press ⋯ More to pin your favorite panels.',
+      t3: 'Open ⚙️ Settings to customize theme, language, and behavior.',
+      note: 'Media note: browser security does not allow hidden playback from closed tabs. Nexus can monitor active audio tabs and notify you.',
+      done: 'Finish Setup ✅'
+    },
+    'zh-CN': {
+      tourTitle: '开始使用',
+      tourSub: '快速了解如何启用并使用 Nexus。',
+      t1: '点击扩展图标，然后打开侧边栏。',
+      t2: '点击底部“⋯ 更多”并固定常用面板。',
+      t3: '打开 ⚙️ 设置来自定义主题、语言和行为。',
+      note: '媒体说明：浏览器安全限制不允许在关闭标签页后继续隐藏播放。Nexus 可监控正在播放音频的标签页并发送通知。',
+      done: '完成设置 ✅'
+    }
+  };
+
+  function renderStep() {
+    steps.forEach((s,i)=>s.classList.toggle('active', i===step));
+    document.getElementById('backBtn').style.visibility = step === 0 ? 'hidden' : 'visible';
+    document.getElementById('nextBtn').textContent = step === 2 ? I18N[selectedLang].done : 'Next →';
+  }
+
+  function applyLangPreview() {
+    const tr = I18N[selectedLang];
+    document.getElementById('tourTitle').textContent = tr.tourTitle;
+    document.getElementById('tourSub').textContent = tr.tourSub;
+    document.getElementById('t1').textContent = tr.t1;
+    document.getElementById('t2').textContent = tr.t2;
+    document.getElementById('t3').textContent = tr.t3;
+    document.getElementById('note').textContent = tr.note;
+    renderStep();
+  }
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedLang = btn.dataset.lang;
+      applyLangPreview();
+    });
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', async () => {
+    if (step < 2) {
+      step += 1;
+      renderStep();
+      return;
+    }
+    const data = await chrome.storage.local.get('nexusSettings');
+    const settings = { ...(data.nexusSettings || {}), language: selectedLang, onboardingCompleted: true };
+    await chrome.storage.local.set({ nexusSettings: settings });
+    window.close();
+  });
+
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (step > 0) step -= 1;
+    renderStep();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+    if (e.key === 'ArrowLeft') document.getElementById('backBtn').click();
+  });
+
+  chrome.storage.local.get('nexusSettings', d => {
+    selectedLang = d.nexusSettings?.language || 'en';
+    const target = document.querySelector(`.lang-btn[data-lang="${selectedLang}"]`);
+    if (target) {
+      document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+      target.classList.add('active');
+    }
+    applyLangPreview();
+    renderStep();
+  });
+</script>
+</body>
+</html>
