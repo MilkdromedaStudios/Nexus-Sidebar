@@ -61,6 +61,7 @@ let S = {
   savedColorsArr: [],
   // news
   newsItems: [],
+  sidebarState: 'panel-open',
 };
 
 const DEFAULTS = {
@@ -146,6 +147,7 @@ async function init() {
   applyLayoutPreferences();
   buildNav();
   bindAll();
+  initSidebarShell();
   openPanel(S.settings.startupPanel || 'dashboard');
   startDashClock();
   resumePomodoroIfNeeded();
@@ -155,6 +157,32 @@ async function init() {
     if (S.currentPanel === 'clock') tickDigitalClock();
   }, 1000);
   console.log('🚀 Nexus ready');
+}
+
+function initSidebarShell() {
+  setSidebarState('closed');
+  const app = qs('#nexusApp');
+  const leftEdge = qs('#edgeTriggerLeft');
+  const rightEdge = qs('#edgeTriggerRight');
+  const isLeft = () => S.settings.sidebarPosition === 'left';
+  const onEdgeEnter = (edge) => {
+    if ((isLeft() && edge === 'left') || (!isLeft() && edge === 'right')) setSidebarState('rail-open');
+  };
+  leftEdge?.addEventListener('mouseenter', () => onEdgeEnter('left'));
+  rightEdge?.addEventListener('mouseenter', () => onEdgeEnter('right'));
+  app?.addEventListener('mouseleave', () => { if (S.settings.autoHideSidebar) setSidebarState('closed'); });
+  document.addEventListener('click', (e) => {
+    if (!S.settings.closeOnOutsideClick) return;
+    if (!app?.contains(e.target)) setSidebarState('closed');
+  });
+}
+
+function setSidebarState(next) {
+  S.sidebarState = next;
+  const app = qs('#nexusApp');
+  if (!app) return;
+  app.classList.remove('state-closed', 'state-rail-open', 'state-panel-open');
+  app.classList.add(`state-${next}`);
 }
 
 // ─── Data load/save ─────────────────────────────────────────────
@@ -456,6 +484,7 @@ function closeDrawerOutside(e) {
 
 // ─── Open Panel ──────────────────────────────────────────────────
 function openPanel(id) {
+  setSidebarState('panel-open');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById(`panel${cap(id)}`);
   if (panel) panel.classList.add('active');
