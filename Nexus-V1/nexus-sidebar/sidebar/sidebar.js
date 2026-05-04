@@ -42,6 +42,8 @@ let S = {
   // pomodoro
   pomoMode: 'work', pomoRunning: false, pomoInterval: null,
   pomoTimeLeft: 25*60, pomoSessions: 0, pomoDots: [],
+  pomoPauseReason: 'none',
+  pomoAutoPausedOnClose: false,
   // stopwatch
   swRunning: false, swElapsed: 0, swInterval: null, swLaps: [],
   // timer
@@ -241,6 +243,8 @@ async function savePomoRuntime() {
     running: S.pomoRunning,
     timeLeft: S.pomoTimeLeft,
     sessions: S.pomoSessions,
+    pauseReason: S.pomoPauseReason,
+    autoPausedOnClose: S.pomoAutoPausedOnClose,
     lastUpdated: Date.now()
   };
   try { await chrome.storage.local.set({ [POMO_RUNTIME_KEY]: runtime }); }
@@ -264,6 +268,8 @@ async function loadPomoRuntime() {
   S.pomoMode = runtime.mode || 'work';
   S.pomoSessions = Number.isFinite(runtime.sessions) ? runtime.sessions : 0;
   S.pomoTimeLeft = Number.isFinite(runtime.timeLeft) ? runtime.timeLeft : pomoSeconds();
+  S.pomoPauseReason = runtime.pauseReason || 'none';
+  S.pomoAutoPausedOnClose = !!runtime.autoPausedOnClose;
   if (runtime.running && runtime.lastUpdated) {
     const elapsed = Math.max(0, Math.floor((Date.now() - runtime.lastUpdated) / 1000));
     S.pomoTimeLeft = Math.max(0, S.pomoTimeLeft - elapsed);
@@ -285,6 +291,63 @@ function resumePomodoroIfNeeded() {
   } else {
     qs('#pomoStart').innerHTML = tr('ui.pomoStart','▶ Start');
   }
+}
+
+
+function getPomoStartLabel() {
+  if (S.pomoRunning) return '⏸ Pause';
+  if (S.pomoPauseReason === 'sidebar-closed') return '▶ Resume (Auto-paused)';
+  return '▶ Start';
+}
+
+function shouldResumeOnSidebarOpen(state = S) {
+  return !!(state.pomoAutoPausedOnClose && state.pomoPauseReason === 'sidebar-closed' && !state.pomoRunning && state.pomoTimeLeft > 0);
+}
+
+function setPomoPaused(pauseReason = 'manual', autoPausedOnClose = false) {
+  S.pomoRunning = false;
+  S.pomoPauseReason = pauseReason;
+  S.pomoAutoPausedOnClose = autoPausedOnClose;
+  clearInterval(S.pomoInterval);
+  S.pomoInterval = null;
+  qs('#pomoStart').innerHTML = getPomoStartLabel();
+  savePomoRuntime();
+}
+
+function setupSidebarVisibilityEvents() {
+  let wasHidden = document.visibilityState !== 'visible';
+  document.addEventListener('visibilitychange', () => {
+    const isHidden = document.visibilityState !== 'visible';
+    if (isHidden && !wasHidden) document.dispatchEvent(new CustomEvent('sidebar:closed'));
+    if (!isHidden && wasHidden) document.dispatchEvent(new CustomEvent('sidebar:opened'));
+    wasHidden = isHidden;
+  });
+}
+
+function bindSidebarVisibilityLifecycle() {
+  document.addEventListener('sidebar:closed', () => {
+    if (S.pomoRunning) setPomoPaused('sidebar-closed', true);
+  });
+  document.addEventListener('sidebar:opened', () => {
+    if (!shouldResumeOnSidebarOpen()) return;
+    S.pomoRunning = true;
+    S.pomoPauseReason = 'none';
+    S.pomoAutoPausedOnClose = false;
+    qs('#pomoStart').innerHTML = getPomoStartLabel();
+    clearInterval(S.pomoInterval);
+    S.pomoInterval = setInterval(tickPomo, 1000);
+    savePomoRuntime();
+  });
+  runPomodoroCloseOpenRegressionChecks();
+}
+
+function runPomodoroCloseOpenRegressionChecks() {
+  const autoPaused = { pomoAutoPausedOnClose: true, pomoPauseReason: 'sidebar-closed', pomoRunning: false, pomoTimeLeft: 120 };
+  const manualPaused = { pomoAutoPausedOnClose: false, pomoPauseReason: 'manual', pomoRunning: false, pomoTimeLeft: 120 };
+  const completed = { pomoAutoPausedOnClose: true, pomoPauseReason: 'sidebar-closed', pomoRunning: false, pomoTimeLeft: 0 };
+  console.assert(shouldResumeOnSidebarOpen(autoPaused) === true, 'Regression: auto-paused timer should resume on sidebar:opened');
+  console.assert(shouldResumeOnSidebarOpen(manualPaused) === false, 'Regression: manually paused timer must not auto-resume on sidebar:opened');
+  console.assert(shouldResumeOnSidebarOpen(completed) === false, 'Regression: completed timer must not auto-resume on sidebar:opened');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1086,8 +1149,8 @@ function togglePomo() {
     S.pomoRunning=true;
     qs('#pomoStart').innerHTML=tr('ui.pomoPause','⏸ Pause');
     S.pomoInterval = setInterval(tickPomo, 1000);
+    savePomoRuntime();
   }
-  savePomoRuntime();
 }
 
 function tickPomo() {
@@ -1124,6 +1187,8 @@ function pomoComplete() {
 
 function resetPomo() {
   S.pomoRunning=false; clearInterval(S.pomoInterval);
+  S.pomoPauseReason='none';
+  S.pomoAutoPausedOnClose=false;
   S.pomoTimeLeft = pomoSeconds();
   qs('#pomoStart').innerHTML=tr('ui.pomoStart','▶ Start');
   qs('#pomoTime').textContent = secToMS(S.pomoTimeLeft);
