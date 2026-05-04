@@ -62,6 +62,9 @@ body { overflow: hidden; width: 100vw; height: 100vh; }
   --bg-image-overlay: rgba(13,13,20,0.7);
   --noise-opacity: 0.03;
   --sidebar-bg: var(--bg-primary);
+  --rail-peek-size: 8px;
+  --rail-open-ms: 180ms;
+  --panel-open-ms: 220ms;
 }
 
 /* ── LIGHT ── */
@@ -349,6 +352,19 @@ body { overflow: hidden; width: 100vw; height: 100vh; }
   position: relative;
   overflow: hidden;
 }
+.edge-trigger { position: absolute; top: 0; bottom: 0; width: var(--rail-peek-size); z-index: 40; }
+.edge-trigger-left { left: 0; }
+.edge-trigger-right { right: 0; }
+
+.nexus-app.state-closed .nexus-nav { transform: translateX(calc(var(--nav-width) * -1)); }
+html[data-sidebar-position="left"] .nexus-app.state-closed .nexus-nav { transform: translateX(var(--nav-width)); }
+.nexus-app.state-closed .nexus-content,
+.nexus-app.state-rail-open .nexus-content {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(8px);
+}
+.nexus-app.state-panel-open .nexus-content { opacity: 1; pointer-events: auto; transform: translateX(0); }
 
 html[data-sidebar-position="left"] .nexus-app {
   flex-direction: row-reverse;
@@ -422,6 +438,7 @@ html[data-sidebar-position="left"] .nexus-app {
   flex-shrink: 0;
   backdrop-filter: blur(var(--glass-blur, 0px));
   position: relative;
+  transition: transform var(--rail-open-ms) ease, opacity var(--rail-open-ms) ease;
 }
 
 html[data-sidebar-position="left"] .nexus-nav {
@@ -546,6 +563,7 @@ html[data-sidebar-position="left"] .nav-item.active {
   height: 100vh;
   overflow: hidden;
   z-index: 1;
+  transition: opacity var(--panel-open-ms) ease, transform var(--panel-open-ms) ease;
 }
 
 /* ─── Header Bar ─────────────────────────────────────────────────────── */
