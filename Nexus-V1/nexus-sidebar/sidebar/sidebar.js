@@ -43,6 +43,8 @@ let S = {
   // pomodoro
   pomoMode: 'work', pomoRunning: false, pomoInterval: null,
   pomoTimeLeft: 25*60, pomoSessions: 0, pomoDots: [],
+  pomoPauseReason: 'none',
+  pomoAutoPausedOnClose: false,
   // stopwatch
   swRunning: false, swElapsed: 0, swInterval: null, swLaps: [],
   // timer
@@ -62,7 +64,7 @@ let S = {
   savedColorsArr: [],
   // news
   newsItems: [],
-  iframeSession: null,
+  sidebarState: 'panel-open',
 };
 
 const iframeManager = (() => {
@@ -190,13 +192,22 @@ const DEFAULTS = {
 const I18N = {
   en: {
     panel: { dashboard:'Dashboard', todo:'Todo', notes:'Notes', calendar:'Calendar', pomodoro:'Pomodoro', bookmarks:'Bookmarks', weather:'Weather', clock:'Clock', calculator:'Calculator', habits:'Habits', password:'Password', colorpicker:'Color Picker', converter:'Converter', news:'News', settings:'Settings' },
-    greet: { morning:'☀️ Good morning', afternoon:'🌤 Good afternoon', evening:'🌙 Good evening', night:'🌟 Good night' }
+    greet: { morning:'☀️ Good morning', afternoon:'🌤 Good afternoon', evening:'🌙 Good evening', night:'🌟 Good night' },
+    ui:{more:'More',settings:'Settings',morePanels:'More panels',panels:'Panels',pinnedToSidebar:'📌 Pinned to sidebar',morePanelsSection:'➕ More panels',nothingPinned:'Nothing pinned yet',allPinned:'All panels pinned!',dragHint:'Drag panels to reorder • Max {max} pinned',pinnedCount:'{count}/{max} pinned',unpin:'Unpin from sidebar',pin:'Pin to sidebar',sidebarFull:'Sidebar full (max {max})',dashboardCantUnpin:'Dashboard cannot be unpinned',onePinned:'At least one panel must stay pinned',sidebarFullToast:'Sidebar full! Unpin something first (max {max})',unpinned:'{panel} unpinned',pinnedToast:'{panel} pinned to sidebar ✓',noNotifications:'No new notifications 🔔',settingsOptions:'110+ options',stayFocused:'Stay focused',tasksLeft:'{count} tasks left',savedCount:'{count} saved',habitsToday:'{done}/{total} today',workSession:'Work Session',shortBreak:'Short Break',longBreak:'Long Break',pomoPause:'⏸ Pause',pomoStart:'▶ Start'},
+    empty:{dashboardTasks:'No tasks yet — add one below! ✨',todo:'Nothing here! 🎉',notes:'No notes found',events:'No events. Add one!',bookmarks:'No bookmarks yet. Add some!',calcHistory:'No history yet',habits:'No habits yet. Build a routine! 🏃',news:'No news loaded. Add RSS feed URLs in Settings → News Feed URLs',search:'No results found'}
   },
   'zh-CN': {
     panel: { dashboard:'仪表盘', todo:'待办', notes:'笔记', calendar:'日历', pomodoro:'番茄钟', bookmarks:'书签', weather:'天气', clock:'时钟', calculator:'计算器', habits:'习惯', password:'密码', colorpicker:'取色器', converter:'转换器', news:'新闻', settings:'设置' },
-    greet: { morning:'☀️ 早上好', afternoon:'🌤 下午好', evening:'🌙 晚上好', night:'🌟 夜深了' }
+    greet: { morning:'☀️ 早上好', afternoon:'🌤 下午好', evening:'🌙 晚上好', night:'🌟 夜深了' },
+    ui:{more:'更多',settings:'设置',morePanels:'更多面板',panels:'面板',pinnedToSidebar:'📌 已固定到侧边栏',morePanelsSection:'➕ 更多面板',nothingPinned:'尚未固定任何面板',allPinned:'所有面板都已固定！',dragHint:'拖拽可重排 • 最多 {max} 个',pinnedCount:'已固定 {count}/{max}',unpin:'从侧边栏取消固定',pin:'固定到侧边栏',sidebarFull:'侧边栏已满（最多 {max}）',dashboardCantUnpin:'主页不可取消固定',onePinned:'至少保留一个固定面板',sidebarFullToast:'侧边栏已满！请先取消一个（最多 {max}）',unpinned:'已取消固定：{panel}',pinnedToast:'已固定到侧边栏：{panel} ✓',noNotifications:'暂无新通知 🔔',settingsOptions:'110+ 项设置',stayFocused:'保持专注',tasksLeft:'剩余 {count} 个任务',savedCount:'已保存 {count} 项',habitsToday:'今日 {done}/{total}',workSession:'工作时段',shortBreak:'短休息',longBreak:'长休息',pomoPause:'⏸ 暂停',pomoStart:'▶ 开始'},
+    empty:{dashboardTasks:'还没有任务——在下方添加一个吧！✨',todo:'这里空空如也！🎉',notes:'未找到笔记',events:'暂无事件，添加一个吧！',bookmarks:'还没有书签，去添加一些吧！',calcHistory:'暂无历史记录',habits:'还没有习惯项，开始建立例行吧！🏃',news:'暂无新闻。请在设置 → 新闻源 URL 中添加 RSS 地址',search:'未找到结果'}
   }
 };
+
+function tf(path, vars={}, fallback='') {
+  const base = tr(path, fallback);
+  return String(base).replace(/\{(\w+)\}/g, (_,k)=> vars[k] ?? `{${k}}`);
+}
 
 function tr(path, fallback='') {
   const lang = S.settings.language || 'en';
@@ -210,7 +221,9 @@ function tr(path, fallback='') {
     for (const p of parts) en = en?.[p];
     if (en !== undefined) return en;
   }
-  return fallback;
+  const outFallback = fallback || path;
+  if (S?.settings?.debugMode) console.warn('[i18n] Missing key:', path, 'lang:', lang);
+  return outFallback;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -222,6 +235,7 @@ async function init() {
   applyLayoutPreferences();
   buildNav();
   bindAll();
+  initSidebarShell();
   openPanel(S.settings.startupPanel || 'dashboard');
   startDashClock();
   resumePomodoroIfNeeded();
@@ -231,6 +245,32 @@ async function init() {
     if (S.currentPanel === 'clock') tickDigitalClock();
   }, 1000);
   console.log('🚀 Nexus ready');
+}
+
+function initSidebarShell() {
+  setSidebarState('closed');
+  const app = qs('#nexusApp');
+  const leftEdge = qs('#edgeTriggerLeft');
+  const rightEdge = qs('#edgeTriggerRight');
+  const isLeft = () => S.settings.sidebarPosition === 'left';
+  const onEdgeEnter = (edge) => {
+    if ((isLeft() && edge === 'left') || (!isLeft() && edge === 'right')) setSidebarState('rail-open');
+  };
+  leftEdge?.addEventListener('mouseenter', () => onEdgeEnter('left'));
+  rightEdge?.addEventListener('mouseenter', () => onEdgeEnter('right'));
+  app?.addEventListener('mouseleave', () => { if (S.settings.autoHideSidebar) setSidebarState('closed'); });
+  document.addEventListener('click', (e) => {
+    if (!S.settings.closeOnOutsideClick) return;
+    if (!app?.contains(e.target)) setSidebarState('closed');
+  });
+}
+
+function setSidebarState(next) {
+  S.sidebarState = next;
+  const app = qs('#nexusApp');
+  if (!app) return;
+  app.classList.remove('state-closed', 'state-rail-open', 'state-panel-open');
+  app.classList.add(`state-${next}`);
 }
 
 // ─── Data load/save ─────────────────────────────────────────────
@@ -284,6 +324,8 @@ async function savePomoRuntime() {
     running: S.pomoRunning,
     timeLeft: S.pomoTimeLeft,
     sessions: S.pomoSessions,
+    pauseReason: S.pomoPauseReason,
+    autoPausedOnClose: S.pomoAutoPausedOnClose,
     lastUpdated: Date.now()
   };
   try { await chrome.storage.local.set({ [POMO_RUNTIME_KEY]: runtime }); }
@@ -307,6 +349,8 @@ async function loadPomoRuntime() {
   S.pomoMode = runtime.mode || 'work';
   S.pomoSessions = Number.isFinite(runtime.sessions) ? runtime.sessions : 0;
   S.pomoTimeLeft = Number.isFinite(runtime.timeLeft) ? runtime.timeLeft : pomoSeconds();
+  S.pomoPauseReason = runtime.pauseReason || 'none';
+  S.pomoAutoPausedOnClose = !!runtime.autoPausedOnClose;
   if (runtime.running && runtime.lastUpdated) {
     const elapsed = Math.max(0, Math.floor((Date.now() - runtime.lastUpdated) / 1000));
     S.pomoTimeLeft = Math.max(0, S.pomoTimeLeft - elapsed);
@@ -322,12 +366,69 @@ function resumePomodoroIfNeeded() {
   qsa('.pomo-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === S.pomoMode));
   renderPomoRing();
   if (S.pomoRunning) {
-    qs('#pomoStart').innerHTML = '⏸ Pause';
+    qs('#pomoStart').innerHTML = tr('ui.pomoPause','⏸ Pause');
     S.pomoInterval = setInterval(tickPomo, 1000);
     savePomoRuntime();
   } else {
-    qs('#pomoStart').innerHTML = '▶ Start';
+    qs('#pomoStart').innerHTML = tr('ui.pomoStart','▶ Start');
   }
+}
+
+
+function getPomoStartLabel() {
+  if (S.pomoRunning) return '⏸ Pause';
+  if (S.pomoPauseReason === 'sidebar-closed') return '▶ Resume (Auto-paused)';
+  return '▶ Start';
+}
+
+function shouldResumeOnSidebarOpen(state = S) {
+  return !!(state.pomoAutoPausedOnClose && state.pomoPauseReason === 'sidebar-closed' && !state.pomoRunning && state.pomoTimeLeft > 0);
+}
+
+function setPomoPaused(pauseReason = 'manual', autoPausedOnClose = false) {
+  S.pomoRunning = false;
+  S.pomoPauseReason = pauseReason;
+  S.pomoAutoPausedOnClose = autoPausedOnClose;
+  clearInterval(S.pomoInterval);
+  S.pomoInterval = null;
+  qs('#pomoStart').innerHTML = getPomoStartLabel();
+  savePomoRuntime();
+}
+
+function setupSidebarVisibilityEvents() {
+  let wasHidden = document.visibilityState !== 'visible';
+  document.addEventListener('visibilitychange', () => {
+    const isHidden = document.visibilityState !== 'visible';
+    if (isHidden && !wasHidden) document.dispatchEvent(new CustomEvent('sidebar:closed'));
+    if (!isHidden && wasHidden) document.dispatchEvent(new CustomEvent('sidebar:opened'));
+    wasHidden = isHidden;
+  });
+}
+
+function bindSidebarVisibilityLifecycle() {
+  document.addEventListener('sidebar:closed', () => {
+    if (S.pomoRunning) setPomoPaused('sidebar-closed', true);
+  });
+  document.addEventListener('sidebar:opened', () => {
+    if (!shouldResumeOnSidebarOpen()) return;
+    S.pomoRunning = true;
+    S.pomoPauseReason = 'none';
+    S.pomoAutoPausedOnClose = false;
+    qs('#pomoStart').innerHTML = getPomoStartLabel();
+    clearInterval(S.pomoInterval);
+    S.pomoInterval = setInterval(tickPomo, 1000);
+    savePomoRuntime();
+  });
+  runPomodoroCloseOpenRegressionChecks();
+}
+
+function runPomodoroCloseOpenRegressionChecks() {
+  const autoPaused = { pomoAutoPausedOnClose: true, pomoPauseReason: 'sidebar-closed', pomoRunning: false, pomoTimeLeft: 120 };
+  const manualPaused = { pomoAutoPausedOnClose: false, pomoPauseReason: 'manual', pomoRunning: false, pomoTimeLeft: 120 };
+  const completed = { pomoAutoPausedOnClose: true, pomoPauseReason: 'sidebar-closed', pomoRunning: false, pomoTimeLeft: 0 };
+  console.assert(shouldResumeOnSidebarOpen(autoPaused) === true, 'Regression: auto-paused timer should resume on sidebar:opened');
+  console.assert(shouldResumeOnSidebarOpen(manualPaused) === false, 'Regression: manually paused timer must not auto-resume on sidebar:opened');
+  console.assert(shouldResumeOnSidebarOpen(completed) === false, 'Regression: completed timer must not auto-resume on sidebar:opened');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -381,13 +482,13 @@ function buildNav() {
     </div>
     <div class="nav-items" id="navItems"></div>
     <div class="nav-bottom">
-      <button class="nav-item" id="navMoreBtn" title="More panels">
+      <button class="nav-item" id="navMoreBtn" title="${tr('ui.morePanels','More panels')}">
         <span class="nav-icon">⋯</span>
-        <span class="nav-label">More</span>
+        <span class="nav-label">${tr('ui.more','More')}</span>
       </button>
-      <button class="nav-item" id="navSettingsBtn" title="Settings">
+      <button class="nav-item" id="navSettingsBtn" title="${tr('ui.settings','Settings')}">
         <span class="nav-icon">⚙️</span>
-        <span class="nav-label">Settings</span>
+        <span class="nav-label">${tr('ui.settings','Settings')}</span>
       </button>
     </div>
   `;
@@ -469,7 +570,7 @@ function buildDrawerHTML() {
         <span class="drawer-icon">${p.icon}</span>
         <span class="drawer-label">${p.label}</span>
       </button>
-      <button class="drawer-pin-btn ${isPinned ? 'pinned' : ''}" data-panel="${p.id}" title="${isPinned ? 'Unpin from sidebar' : pinCount >= MAX_PINNED ? 'Sidebar full (max 7)' : 'Pin to sidebar'}">
+      <button class="drawer-pin-btn ${isPinned ? 'pinned' : ''}" data-panel="${p.id}" title="${isPinned ? tr('ui.unpin','Unpin from sidebar') : pinCount >= MAX_PINNED ? tf('ui.sidebarFull',{max:MAX_PINNED},'Sidebar full (max 7)') : tr('ui.pin','Pin to sidebar')}">
         ${isPinned ? '📌' : pinCount >= MAX_PINNED ? '🔒' : '📍'}
       </button>
     </div>`;
@@ -479,15 +580,15 @@ function buildDrawerHTML() {
 
   return `
     <div class="drawer-header">
-      <span class="drawer-title">Panels</span>
-      <span class="drawer-count">${pinCount}/${MAX_PINNED} pinned</span>
+      <span class="drawer-title">${tr('ui.panels','Panels')}</span>
+      <span class="drawer-count">${tf('ui.pinnedCount',{count:pinCount,max:MAX_PINNED},`${pinCount}/${MAX_PINNED} pinned`)}</span>
       <button class="drawer-close" id="drawerClose">✕</button>
     </div>
-    <div class="drawer-section-label">📌 Pinned to sidebar</div>
-    <div class="drawer-list">${pinnedRows || '<div class="drawer-empty">Nothing pinned yet</div>'}</div>
-    <div class="drawer-section-label">➕ More panels</div>
-    <div class="drawer-list">${overflowRows || '<div class="drawer-empty">All panels pinned!</div>'}</div>
-    <div class="drawer-hint">Drag panels to reorder • Max ${MAX_PINNED} pinned</div>
+    <div class="drawer-section-label">${tr('ui.pinnedToSidebar','📌 Pinned to sidebar')}</div>
+    <div class="drawer-list">${pinnedRows || `<div class="drawer-empty">${tr('ui.nothingPinned','Nothing pinned yet')}</div>`}</div>
+    <div class="drawer-section-label">${tr('ui.morePanelsSection','➕ More panels')}</div>
+    <div class="drawer-list">${overflowRows || `<div class="drawer-empty">${tr('ui.allPinned','All panels pinned!')}</div>`}</div>
+    <div class="drawer-hint">${tf('ui.dragHint',{max:MAX_PINNED},`Drag panels to reorder • Max ${MAX_PINNED} pinned`)}</div>
   `;
 }
 
@@ -496,14 +597,14 @@ function togglePin(panelId) {
   const idx = pinned.indexOf(panelId);
   if (idx !== -1) {
     // Unpin — but don't remove if it's the last one or dashboard
-    if (panelId === 'dashboard') { showToast('Dashboard cannot be unpinned', 'info'); return; }
-    if (pinned.length <= 1) { showToast('At least one panel must stay pinned', 'info'); return; }
+    if (panelId === 'dashboard') { showToast(tr('ui.dashboardCantUnpin','Dashboard cannot be unpinned'), 'info'); return; }
+    if (pinned.length <= 1) { showToast(tr('ui.onePinned','At least one panel must stay pinned'), 'info'); return; }
     pinned.splice(idx, 1);
-    showToast(`${ALL_PANELS.find(p=>p.id===panelId)?.label} unpinned`, 'info');
+    showToast(tf('ui.unpinned',{panel:ALL_PANELS.find(p=>p.id===panelId)?.label||panelId},`${ALL_PANELS.find(p=>p.id===panelId)?.label} unpinned`), 'info');
   } else {
-    if (pinned.length >= MAX_PINNED) { showToast(`Sidebar full! Unpin something first (max ${MAX_PINNED})`, 'error'); return; }
+    if (pinned.length >= MAX_PINNED) { showToast(tf('ui.sidebarFullToast',{max:MAX_PINNED},`Sidebar full! Unpin something first (max ${MAX_PINNED})`), 'error'); return; }
     pinned.push(panelId);
-    showToast(`${ALL_PANELS.find(p=>p.id===panelId)?.label} pinned to sidebar ✓`, 'success');
+    showToast(tf('ui.pinnedToast',{panel:ALL_PANELS.find(p=>p.id===panelId)?.label||panelId},`${ALL_PANELS.find(p=>p.id===panelId)?.label} pinned to sidebar ✓`), 'success');
   }
   S.pinnedPanels = pinned;
   saveSetting('pinnedPanels', pinned);
@@ -538,7 +639,7 @@ function closeDrawerOutside(e) {
 
 // ─── Open Panel ──────────────────────────────────────────────────
 function openPanel(id) {
-  if (S.currentPanel === 'dashboard' && id !== 'dashboard') iframeManager.hideActiveToCache();
+  setSidebarState('panel-open');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById(`panel${cap(id)}`);
   if (panel) panel.classList.add('active');
@@ -552,20 +653,20 @@ function openPanel(id) {
 function updateHeader(id) {
   const map = {
     dashboard:   [`⚡ ${tr('panel.dashboard','Dashboard')}`,   ''],
-    todo:        [`✅ ${tr('panel.todo','Todo')}`,         `${S.todos.filter(t=>!t.completed).length} tasks left`],
-    notes:       [`📝 ${tr('panel.notes','Notes')}`,        `${S.notes.length} saved`],
+    todo:        [`✅ ${tr('panel.todo','Todo')}`,         tf('ui.tasksLeft',{count:S.todos.filter(t=>!t.completed).length},`${S.todos.filter(t=>!t.completed).length} tasks left`)],
+    notes:       [`📝 ${tr('panel.notes','Notes')}`,        tf('ui.savedCount',{count:S.notes.length},`${S.notes.length} saved`)],
     calendar:    [`📅 ${tr('panel.calendar','Calendar')}`,     fmtDate(new Date())],
-    pomodoro:    [`🍅 ${tr('panel.pomodoro','Pomodoro')}`,     'Stay focused'],
-    bookmarks:   [`🔖 ${tr('panel.bookmarks','Bookmarks')}`,    `${S.bookmarks.length} saved`],
+    pomodoro:    [`🍅 ${tr('panel.pomodoro','Pomodoro')}`,     tr('ui.stayFocused','Stay focused')],
+    bookmarks:   [`🔖 ${tr('panel.bookmarks','Bookmarks')}`,    tf('ui.savedCount',{count:S.bookmarks.length},`${S.bookmarks.length} saved`)],
     weather:     [`🌤 ${tr('panel.weather','Weather')}`,      S.weatherData?.city || ''],
     clock:       [`⏱ ${tr('panel.clock','Clock')}`,         ''],
     calculator:  [`🧮 ${tr('panel.calculator','Calculator')}`,   ''],
-    habits:      [`🏃 ${tr('panel.habits','Habits')}`,       `${doneHabitsToday()}/${S.habits.length} today`],
+    habits:      [`🏃 ${tr('panel.habits','Habits')}`,       tf('ui.habitsToday',{done:doneHabitsToday(),total:S.habits.length},`${doneHabitsToday()}/${S.habits.length} today`)],
     password:    [`🔐 ${tr('panel.password','Password')}`,     ''],
     colorpicker: [`🎨 ${tr('panel.colorpicker','Color Picker')}`, ''],
     converter:   [`🔄 ${tr('panel.converter','Converter')}`,    ''],
     news:        [`📡 ${tr('panel.news','News')}`,         ''],
-    settings:    [`⚙️ ${tr('panel.settings','Settings')}`,     '110+ options'],
+    settings:    [`⚙️ ${tr('panel.settings','Settings')}`,     tr('ui.settingsOptions','110+ options')],
   };
   const [title, sub] = map[id] || [cap(id), ''];
   document.getElementById('panelTitle').textContent = title;
@@ -601,27 +702,15 @@ function bindAll() {
   });
   // Header buttons
   document.getElementById('btnQuickNote').addEventListener('click', openQuickNote);
-  document.getElementById('btnNotifications').addEventListener('click', () => showToast('No new notifications 🔔', 'info'));
+  document.getElementById('btnNotifications').addEventListener('click', () => showToast(tr('ui.noNotifications','No new notifications 🔔'), 'info'));
   document.getElementById('globalSearch').addEventListener('focus', openSearchOverlay);
   document.getElementById('globalSearch').addEventListener('click', openSearchOverlay);
   document.getElementById('searchBar').addEventListener('click', openSearchOverlay);
 
   // Search overlay
   qs('#closeSearchOverlay').addEventListener('click', closeSearchOverlay);
-  qs('#globalSearchModal').addEventListener('input', e => doSearch(e.target.value));
-  qs('#globalSearchModal').addEventListener('keydown', e => {
-    if (e.key !== 'Enter') return;
-    const first = qs('#searchResults .search-result-item');
-    if (first) {
-      first.click();
-      return;
-    }
-    const q = qs('#globalSearchModal').value.trim();
-    if (q) {
-      openWebSearch(q);
-      closeSearchOverlay();
-    }
-  });
+  qs('#globalSearchModal').addEventListener('input', e => scheduleSearch(e.target.value));
+  qs('#globalSearchModal').addEventListener('keydown', onSearchKeyDown);
   qs('#searchOverlay').addEventListener('click', e => { if (e.target.id === 'searchOverlay') closeSearchOverlay(); });
 
   // Quick note
@@ -1139,13 +1228,13 @@ function pomoSeconds() {
 function togglePomo() {
   if (S.pomoRunning) {
     S.pomoRunning=false; clearInterval(S.pomoInterval);
-    qs('#pomoStart').innerHTML='▶ Start';
+    qs('#pomoStart').innerHTML=tr('ui.pomoStart','▶ Start');
   } else {
     S.pomoRunning=true;
-    qs('#pomoStart').innerHTML='⏸ Pause';
+    qs('#pomoStart').innerHTML=tr('ui.pomoPause','⏸ Pause');
     S.pomoInterval = setInterval(tickPomo, 1000);
+    savePomoRuntime();
   }
-  savePomoRuntime();
 }
 
 function tickPomo() {
@@ -1157,7 +1246,7 @@ function tickPomo() {
 
 function pomoComplete() {
   S.pomoRunning=false; clearInterval(S.pomoInterval);
-  qs('#pomoStart').innerHTML='▶ Start';
+  qs('#pomoStart').innerHTML=tr('ui.pomoStart','▶ Start');
   if (S.pomoMode==='work') {
     S.pomoSessions++;
     S.settings.totalFocusMinutes = (S.settings.totalFocusMinutes||0) + S.settings.pomodoroWork;
@@ -1182,8 +1271,10 @@ function pomoComplete() {
 
 function resetPomo() {
   S.pomoRunning=false; clearInterval(S.pomoInterval);
+  S.pomoPauseReason='none';
+  S.pomoAutoPausedOnClose=false;
   S.pomoTimeLeft = pomoSeconds();
-  qs('#pomoStart').innerHTML='▶ Start';
+  qs('#pomoStart').innerHTML=tr('ui.pomoStart','▶ Start');
   qs('#pomoTime').textContent = secToMS(S.pomoTimeLeft);
   qs('#pomoSessionLabel').textContent = ({work:'Work Session',short:'Short Break',long:'Long Break'})[S.pomoMode];
   renderPomoRing();
@@ -1494,7 +1585,7 @@ function drawAnalog() {
 // Stopwatch
 function toggleSW() {
   S.swRunning = !S.swRunning;
-  qs('#swStartStop').textContent = S.swRunning ? '⏸ Pause' : '▶ Resume';
+  qs('#swStartStop').textContent = S.swRunning ? tr('ui.pomoPause','⏸ Pause') : '▶ Resume';
   if (S.swRunning) {
     const start = Date.now()-S.swElapsed;
     S.swInterval = setInterval(()=>{S.swElapsed=Date.now()-start; qs('#swDisplay').textContent=msToHMS(S.swElapsed);},33);
@@ -1506,13 +1597,13 @@ function lapSW() {
   S.swLaps.push(S.swElapsed);
   if(lapEl) lapEl.insertAdjacentHTML('afterbegin',`<div class="sw-lap"><span>Lap ${S.swLaps.length}</span><span>${msToHMS(S.swElapsed)}</span></div>`);
 }
-function resetSW() { clearInterval(S.swInterval); S.swRunning=false; S.swElapsed=0; S.swLaps=[]; qs('#swDisplay').textContent='00:00:00.000'; qs('#swStartStop').textContent='▶ Start'; const l=qs('#swLaps');if(l)l.innerHTML=''; }
+function resetSW() { clearInterval(S.swInterval); S.swRunning=false; S.swElapsed=0; S.swLaps=[]; qs('#swDisplay').textContent='00:00:00.000'; qs('#swStartStop').textContent=tr('ui.pomoStart','▶ Start'); const l=qs('#swLaps');if(l)l.innerHTML=''; }
 
 // Timer
 function timerPreset(s) { resetTimer(); S.timerTotal=s; S.timerRemaining=s; qs('#timerDisplay').textContent=secToMS(s); }
 function toggleTimer() {
   S.timerRunning = !S.timerRunning;
-  qs('#timerStartStop').textContent = S.timerRunning ? '⏸ Pause' : '▶ Start';
+  qs('#timerStartStop').textContent = S.timerRunning ? tr('ui.pomoPause','⏸ Pause') : tr('ui.pomoStart','▶ Start');
   if (S.timerRunning) {
     if (!S.timerRemaining) {
       const h=+qs('#timerHours').value||0, m=+qs('#timerMinutes').value||25, s=+qs('#timerSeconds').value||0;
@@ -1522,11 +1613,11 @@ function toggleTimer() {
     S.timerInterval = setInterval(()=>{
       S.timerRemaining--;
       qs('#timerDisplay').textContent=secToMS(S.timerRemaining);
-      if(S.timerRemaining<=0){ clearInterval(S.timerInterval); S.timerRunning=false; showToast('⏰ Timer done!','success'); qs('#timerStartStop').textContent='▶ Start'; try{chrome.notifications.create({type:'basic',iconUrl:'../icons/icon128.png',title:'Nexus Timer',message:qs('#timerLabel').value||'Timer finished!'});}catch{} }
+      if(S.timerRemaining<=0){ clearInterval(S.timerInterval); S.timerRunning=false; showToast('⏰ Timer done!','success'); qs('#timerStartStop').textContent=tr('ui.pomoStart','▶ Start'); try{chrome.notifications.create({type:'basic',iconUrl:'../icons/icon128.png',title:'Nexus Timer',message:qs('#timerLabel').value||'Timer finished!'});}catch{} }
     },1000);
   } else clearInterval(S.timerInterval);
 }
-function resetTimer() { clearInterval(S.timerInterval); S.timerRunning=false; S.timerRemaining=0; qs('#timerStartStop').textContent='▶ Start'; qs('#timerDisplay').textContent=secToMS(0); }
+function resetTimer() { clearInterval(S.timerInterval); S.timerRunning=false; S.timerRemaining=0; qs('#timerStartStop').textContent=tr('ui.pomoStart','▶ Start'); qs('#timerDisplay').textContent=secToMS(0); }
 
 // World Clocks
 function renderWorldClocks() {
@@ -1920,22 +2011,100 @@ function openSearchOverlay() {
   const topSearch = qs('#globalSearch');
   const modalSearch = qs('#globalSearchModal');
   if (topSearch?.value && modalSearch) modalSearch.value = topSearch.value;
-  if (modalSearch?.value) doSearch(modalSearch.value);
+  scheduleSearch(modalSearch?.value || '');
   setTimeout(()=>modalSearch?.focus(),50);
 }
-function closeSearchOverlay() { qs('#searchOverlay').style.display='none'; qs('#globalSearch').value=''; qs('#globalSearchModal').value=''; }
+function closeSearchOverlay() {
+  qs('#searchOverlay').style.display='none';
+  qs('#globalSearch').value='';
+  qs('#globalSearchModal').value='';
+  clearTimeout(S.searchDebounceTimer);
+  S.activeSearchResults = [];
+  S.activeSearchIndex = -1;
+}
 
-function doSearch(q) {
+function scheduleSearch(query) {
+  clearTimeout(S.searchDebounceTimer);
+  const token = ++S.searchQueryToken;
+  S.searchDebounceTimer = setTimeout(() => runUnifiedSearch(query, token), 160);
+}
+
+async function runUnifiedSearch(q, token) {
+  if (token !== S.searchQueryToken) return;
+  const query = (q || '').trim();
   const el=qs('#searchResults'); if(!el) return;
-  if(q.length<2){el.innerHTML='';return;}
-  const results=[];
-  S.todos.filter(t=>t.text.toLowerCase().includes(q.toLowerCase())).forEach(t=>results.push({icon:'✅',text:t.text,sub:'Todo',action:()=>openPanel('todo')}));
-  S.notes.filter(n=>n.title.toLowerCase().includes(q.toLowerCase())||n.content.toLowerCase().includes(q.toLowerCase())).forEach(n=>results.push({icon:'📝',text:n.title,sub:'Note',action:()=>{openPanel('notes');setTimeout(()=>openNote(n.id),100);}}));
-  S.bookmarks.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.url.toLowerCase().includes(q.toLowerCase())).forEach(b=>results.push({icon:'🔖',text:b.title,sub:b.url,action:()=>window.open(b.url,'_blank')}));
-  ALL_PANELS.filter(p=>p.label.toLowerCase().includes(q.toLowerCase())).forEach(p=>results.push({icon:p.icon,text:p.label,sub:'Panel',action:()=>openPanel(p.id)}));
-  if(!results.length){el.innerHTML='<div class="empty-state">No results found</div>';return;}
-  el.innerHTML=results.slice(0,12).map((r,i)=>`<div class="search-result-item" data-idx="${i}"><span class="sri-type">${r.icon}</span><div><div class="sri-text">${esc(r.text)}</div><div class="sri-sub">${esc(r.sub)}</div></div></div>`).join('');
-  el.querySelectorAll('.search-result-item').forEach((item,i)=>item.addEventListener('click',()=>{results[i].action();closeSearchOverlay();}));
+  if(query.length<2){el.innerHTML=''; S.activeSearchResults=[]; S.activeSearchIndex=-1; return;}
+
+  const groups = await Promise.all([
+    searchLocalData(query),
+    searchBookmarksApi(query),
+    searchHistoryApi(query),
+    Promise.resolve(searchActions(query))
+  ]);
+  if (token !== S.searchQueryToken) return;
+  const results = groups.flat().slice(0, 20);
+  S.activeSearchResults = results;
+  S.activeSearchIndex = results.length ? 0 : -1;
+  renderSearchResults(query, results);
+}
+
+function searchLocalData(q){
+  const out=[]; const k=q.toLowerCase();
+  S.todos.filter(t=>t.text.toLowerCase().includes(k)).forEach(t=>out.push({icon:'✅',text:t.text,sub:'Todo',source:'Action',rank:50,action:()=>openPanel('todo')}));
+  S.notes.filter(n=>n.title.toLowerCase().includes(k)||n.content.toLowerCase().includes(k)).forEach(n=>out.push({icon:'📝',text:n.title||'Untitled note',sub:'Note',source:'Action',rank:55,action:()=>{openPanel('notes');setTimeout(()=>openNote(n.id),100);}}));
+  return out;
+}
+async function searchBookmarksApi(q){
+  try {
+    if (!chrome?.bookmarks?.search) return [];
+    const items = await chrome.bookmarks.search(q);
+    return (items||[]).filter(b=>b.url).slice(0,6).map(b=>({icon:'🔖', text:b.title||b.url, sub:b.url, source:'Bookmark', rank:100, action:()=>window.open(b.url,'_blank')}));
+  } catch { return []; }
+}
+async function searchHistoryApi(q){
+  try {
+    if (!chrome?.permissions?.contains || !chrome?.history?.search) return [];
+    const hasPerm = await chrome.permissions.contains({permissions:['history']});
+    if (!hasPerm) return [];
+    const items = await chrome.history.search({text:q, maxResults:6, startTime: Date.now() - (1000*60*60*24*30)});
+    return (items||[]).filter(h=>h.url).map(h=>({icon:'🕘', text:h.title||h.url, sub:h.url, source:'History', rank:90, action:()=>window.open(h.url,'_blank')}));
+  } catch { return []; }
+}
+function searchActions(q){
+  const k=q.toLowerCase();
+  return ALL_PANELS.filter(p=>p.label.toLowerCase().includes(k)).map(p=>({icon:p.icon,text:p.label,sub:'Open panel',source:'Action',rank:80,action:()=>openPanel(p.id)}));
+}
+function renderSearchResults(query, results){
+  const el=qs('#searchResults'); if(!el) return;
+  if(!results.length){
+    el.innerHTML=`<div class="empty-state">No local matches. Press Enter to search the web for <b>${esc(query)}</b>.</div>`;
+    return;
+  }
+  const ordered = [...results].sort((a,b)=>b.rank-a.rank);
+  S.activeSearchResults = ordered;
+  const rows = ordered.map((r,i)=>`<div class="search-result-item ${i===S.activeSearchIndex?'active':''}" data-idx="${i}"><span class="sri-type">${r.icon}</span><div><div class="sri-text">${esc(r.text)}</div><div class="sri-sub">${esc(r.source)} · ${esc(r.sub||'')}</div></div></div>`).join('');
+  el.innerHTML=rows;
+  el.querySelectorAll('.search-result-item').forEach((item,i)=>item.addEventListener('click',()=>activateSearchResult(i)));
+}
+function activateSearchResult(index){
+  const item = S.activeSearchResults[index];
+  if (!item) return;
+  item.action();
+  closeSearchOverlay();
+}
+function onSearchKeyDown(e){
+  if (e.key==='ArrowDown' || e.key==='ArrowUp'){
+    e.preventDefault();
+    const len=S.activeSearchResults.length; if(!len) return;
+    const delta=e.key==='ArrowDown'?1:-1;
+    S.activeSearchIndex=(S.activeSearchIndex+delta+len)%len;
+    renderSearchResults(qs('#globalSearchModal').value.trim(), S.activeSearchResults);
+    return;
+  }
+  if (e.key !== 'Enter') return;
+  const q = qs('#globalSearchModal').value.trim();
+  if (S.activeSearchResults[S.activeSearchIndex]) { activateSearchResult(S.activeSearchIndex); return; }
+  if (q) { openWebSearch(q); closeSearchOverlay(); }
 }
 
 function openWebSearch(query) {
@@ -2282,8 +2451,10 @@ function renderSettings() {
       else if (inp.type==='range') { saveSetting(key, parseFloat(inp.value)); applyTheme(); }
       else { saveSetting(key, inp.value); applyTheme(); }
       if (key === 'language') {
+        buildNav();
         updateHeader(S.currentPanel);
-        if (S.currentPanel === 'dashboard') renderDashboard();
+        onOpen(S.currentPanel);
+        if (S.currentPanel === 'settings') renderSettings();
       }
     });
     if (inp.type==='color') inp.addEventListener('input', () => { saveSetting(key, inp.value); applyTheme(); });

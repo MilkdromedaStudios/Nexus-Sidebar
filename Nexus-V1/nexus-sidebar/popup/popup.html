@@ -16,6 +16,7 @@
   .row span:last-child { color:#e8e8f0; font-weight:600; }
   .shortcut { background:#13131e; border-radius:6px; padding:6px 10px; font-size:11px; color:#9898b0; display:flex; justify-content:space-between; margin-bottom:4px; }
   .shortcut kbd { background:#252538; padding:2px 6px; border-radius:4px; font-size:10px; color:#6C63FF; }
+  .status { font-size:11px; color:#ffb4b4; min-height:16px; margin:4px 0 8px; }
   a { color:#6C63FF; font-size:11px; text-decoration:none; display:block; text-align:center; margin-top:8px; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&display=swap" rel="stylesheet"/>
@@ -23,30 +24,35 @@
 <body>
 <div class="logo">
   <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M8 10h6l4 12 4-12h6" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="22" r="2" fill="white"/><defs><linearGradient id="g" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6C63FF"/><stop offset="1" stop-color="#FF6B9D"/></linearGradient></defs></svg>
-  <div><h1>Nexus</h1><p>Productivity Sidebar</p></div>
+  <div><h1>Nexus</h1><p id="brandSub">Productivity Sidebar</p></div>
 </div>
 
-<button id="openBtn">⚡ Open Sidebar</button>
+<button id="openBtn">⚡ Toggle Sidebar</button>
+<div id="status" class="status"></div>
 
 <div class="sec" id="statsBox">
-  <h3>Today</h3>
-  <div class="row"><span>Tasks remaining</span><span id="pTasks">–</span></div>
-  <div class="row"><span>Habits done</span><span id="pHabits">–</span></div>
-  <div class="row"><span>Focus time</span><span id="pFocus">–</span></div>
+  <h3 id="todayTitle">Today</h3>
+  <div class="row"><span id="tasksLabel">Tasks remaining</span><span id="pTasks">–</span></div>
+  <div class="row"><span id="habitsLabel">Habits done</span><span id="pHabits">–</span></div>
+  <div class="row"><span id="focusLabel">Focus time</span><span id="pFocus">–</span></div>
 </div>
 
 <div class="sec">
-  <h3>Shortcuts</h3>
-  <div class="shortcut">Open Sidebar <kbd>Ctrl+Shift+S</kbd></div>
-  <div class="shortcut">Todo <kbd>Ctrl+Shift+T</kbd></div>
-  <div class="shortcut">Notes <kbd>Ctrl+Shift+N</kbd></div>
-  <div class="shortcut">Focus <kbd>Ctrl+Shift+P</kbd></div>
+  <h3 id="shortcutsTitle">Shortcuts</h3>
+  <div class="shortcut"><span id="scOpen">Open Sidebar</span> <kbd>Ctrl+Shift+S</kbd></div>
+  <div class="shortcut"><span id="scTodo">Todo</span> <kbd>Ctrl+Shift+T</kbd></div>
+  <div class="shortcut"><span id="scNotes">Notes</span> <kbd>Ctrl+Shift+N</kbd></div>
+  <div class="shortcut"><span id="scFocus">Focus</span> <kbd>Ctrl+Shift+P</kbd></div>
 </div>
 
-<a href="sidebar/sidebar.html" target="_blank">Open in full tab ↗</a>
+<a href="sidebar/sidebar.html" target="_blank" id="openTabLink">Open in full tab ↗</a>
 
 <script>
+const statusEl = document.getElementById('status');
+
 chrome.storage.local.get('nexusSettings', d => {
+  const lang = d.nexusSettings?.language || 'en';
+  applyLocale(lang);
   if (!d.nexusSettings?.onboardingCompleted) {
     chrome.tabs.create({ url: 'sidebar/welcome.html' });
     window.close();
@@ -55,7 +61,17 @@ chrome.storage.local.get('nexusSettings', d => {
 
 document.getElementById('openBtn').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
-  if (tab) chrome.sidePanel.open({tabId:tab.id});
+  if (!tab?.id) {
+    statusEl.textContent = 'No active tab found.';
+    return;
+  }
+
+  const result = await chrome.runtime.sendMessage({ action: 'openSidePanel' });
+  if (!result?.ok) {
+    statusEl.textContent = 'Sidebar is unavailable here. Browser internal pages block extension overlays.';
+    return;
+  }
+
   window.close();
 });
 

@@ -1,0 +1,21 @@
+#nexus-overlay-root { position: fixed; top: 0; bottom: 0; z-index: 2147483646; pointer-events: none; }
+#nexus-overlay-root.nexus-right { right: 0; }
+#nexus-overlay-root.nexus-left { left: 0; }
+
+#nexus-overlay-panel {
+  width: min(420px, 92vw);
+  height: 100%;
+  background: #0b0b13;
+  box-shadow: 0 0 24px rgba(0,0,0,0.4);
+  transform: translateX(100%);
+  transition: transform 220ms ease;
+  pointer-events: auto;
+}
+#nexus-overlay-root.nexus-left #nexus-overlay-panel { transform: translateX(-100%); }
+#nexus-overlay-root.open #nexus-overlay-panel { transform: translateX(0); }
+
+#nexus-overlay-trigger {
+  position: fixed; top: 0; bottom: 0; width: 8px; z-index: 2147483645; background: transparent;
+}
+#nexus-overlay-trigger.nexus-right { right: 0; }
+#nexus-overlay-trigger.nexus-left { left: 0; }
