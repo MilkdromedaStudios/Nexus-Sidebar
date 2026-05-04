@@ -12,6 +12,8 @@
 <body>
 
 <div class="nexus-app" id="nexusApp">
+  <div class="edge-trigger edge-trigger-left" id="edgeTriggerLeft" aria-hidden="true"></div>
+  <div class="edge-trigger edge-trigger-right" id="edgeTriggerRight" aria-hidden="true"></div>
 
   <!-- Background Layer -->
   <div class="nexus-bg" id="nexusBg">
@@ -72,6 +74,10 @@
         <div class="quick-sites" id="quickSiteGrid">
           <!-- Populated by JS -->
         </div>
+      </div>
+      <div class="dash-section site-embed-shell" id="siteEmbedShell">
+        <div class="section-header"><h3 id="siteEmbedTitle">Embedded Site</h3></div>
+        <div class="site-embed-panel" id="siteEmbedPanel"></div>
       </div>
 
       <!-- Today's Todos -->
@@ -724,6 +730,7 @@
     </section>
 
   </main>
+  <div id="iframeHiddenCache" aria-hidden="true"></div>
 
   <!-- ─── Overlays & Modals ───────────────────────────────────── -->
 
