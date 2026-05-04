@@ -19,3 +19,7 @@ Click ⋯ More in the nav → use 📍 to pin/unpin panels. Max 7 pinned at once
 
 ## 10 Themes
 Dark · Light · Glass · Glass Dark · Retrowave · Neon · Ocean · Forest · Nord · Dracula
+
+## Static Checks
+- Run `./scripts/check-no-github-promos.sh` before commit/PR.
+- This check fails if shipped UI templates/defaults reintroduce hardcoded GitHub promo links or default entries.
