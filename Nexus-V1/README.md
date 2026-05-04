@@ -1,10 +1,10 @@
-# Nexus-V1 (Clean PR Snapshot)
+# Nexus-V1 (Legacy Reference)
 
-This folder is the **new clean review target**.
+This folder is frozen as a **legacy reference only**.
 
-If previous PRs were messy/conflicted, use this path only:
+Active implementation and docs moved to:
 
-- `Nexus-V1/nexus-sidebar/`
+- `Nexus-V2/nexus-sidebar-next/`
 
 ## Load unpacked
 1. Open browser extensions page.

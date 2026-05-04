@@ -1,6 +1,6 @@
-# Nexus Sidebar (Clean PR)
+# Nexus Sidebar (Active: Modular V2 Path)
 
-This repository is organized for a clean review path.
+This repository now routes active implementation and docs to:
 
 Primary extension path:
 - `Nexus-V1/nexus-sidebar/`
@@ -27,37 +27,9 @@ Nexus Sidebar is a tile-first productivity extension for Chromium browsers.
 
 ---
 
-## Installation
+Legacy reference (frozen, no active feature work):
 
-### Load unpacked (Chrome / Edge / Opera GX)
-1. Open extensions page:
-   - Chrome: `chrome://extensions`
-   - Edge: `edge://extensions`
-   - Opera GX: `opera://extensions`
-2. Enable **Developer Mode**.
-3. Click **Load unpacked**.
-4. Select: `Nexus-V1/nexus-sidebar/`.
-
----
-
-## Other Stuff
-
-### Keyboard shortcuts (default)
-- Toggle sidebar: `Ctrl+Shift+S`
-- Open Todo: `Ctrl+Shift+T`
-- Open Notes: `Ctrl+Shift+N`
-- Open Pomodoro: `Ctrl+Shift+P`
-
-### Data & storage
-- Uses `chrome.storage.local` for settings and app data.
-- Settings include language, onboarding completion, and media monitor options.
-
-### Troubleshooting
-- Reload unpacked extension after updates.
-- If onboarding reappears unexpectedly, check `onboardingCompleted` in local storage data.
-- Validate manifest and JS syntax if needed:
-  - `node --check Nexus-V1/nexus-sidebar/sidebar/sidebar.js`
-  - `node --check Nexus-V1/nexus-sidebar/background.js`
+- `Nexus-V1/nexus-sidebar/`
 
 ### Changelog
 - See `CHANGELOG.md` for release history.

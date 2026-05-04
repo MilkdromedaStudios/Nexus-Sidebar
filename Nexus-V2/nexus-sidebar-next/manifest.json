@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Sidebar Next",
+  "short_name": "NexusNext",
+  "version": "2.0.0-alpha.1",
+  "description": "Modular Nexus Sidebar implementation path.",
+  "permissions": ["storage", "sidePanel"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "sidebar/sidebar.html" },
+  "action": { "default_popup": "popup/popup.html" },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "32": "icons/icon32.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}
