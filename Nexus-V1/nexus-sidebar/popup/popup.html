@@ -23,30 +23,37 @@
 <body>
 <div class="logo">
   <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="url(#g)"/><path d="M8 10h6l4 12 4-12h6" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="22" r="2" fill="white"/><defs><linearGradient id="g" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6C63FF"/><stop offset="1" stop-color="#FF6B9D"/></linearGradient></defs></svg>
-  <div><h1>Nexus</h1><p>Productivity Sidebar</p></div>
+  <div><h1>Nexus</h1><p id="brandSub">Productivity Sidebar</p></div>
 </div>
 
-<button id="openBtn">⚡ Open Sidebar</button>
+<button id="openBtn" id="openBtn">⚡ Open Sidebar</button>
 
 <div class="sec" id="statsBox">
-  <h3>Today</h3>
-  <div class="row"><span>Tasks remaining</span><span id="pTasks">–</span></div>
-  <div class="row"><span>Habits done</span><span id="pHabits">–</span></div>
-  <div class="row"><span>Focus time</span><span id="pFocus">–</span></div>
+  <h3 id="todayTitle">Today</h3>
+  <div class="row"><span id="tasksLabel">Tasks remaining</span><span id="pTasks">–</span></div>
+  <div class="row"><span id="habitsLabel">Habits done</span><span id="pHabits">–</span></div>
+  <div class="row"><span id="focusLabel">Focus time</span><span id="pFocus">–</span></div>
 </div>
 
 <div class="sec">
-  <h3>Shortcuts</h3>
-  <div class="shortcut">Open Sidebar <kbd>Ctrl+Shift+S</kbd></div>
-  <div class="shortcut">Todo <kbd>Ctrl+Shift+T</kbd></div>
-  <div class="shortcut">Notes <kbd>Ctrl+Shift+N</kbd></div>
-  <div class="shortcut">Focus <kbd>Ctrl+Shift+P</kbd></div>
+  <h3 id="shortcutsTitle">Shortcuts</h3>
+  <div class="shortcut"><span id="scOpen">Open Sidebar</span> <kbd>Ctrl+Shift+S</kbd></div>
+  <div class="shortcut"><span id="scTodo">Todo</span> <kbd>Ctrl+Shift+T</kbd></div>
+  <div class="shortcut"><span id="scNotes">Notes</span> <kbd>Ctrl+Shift+N</kbd></div>
+  <div class="shortcut"><span id="scFocus">Focus</span> <kbd>Ctrl+Shift+P</kbd></div>
 </div>
 
-<a href="sidebar/sidebar.html" target="_blank">Open in full tab ↗</a>
+<a href="sidebar/sidebar.html" target="_blank" id="openTabLink">Open in full tab ↗</a>
 
 <script>
+
+const I18N={en:{brandSub:'Productivity Sidebar',openSidebar:'⚡ Open Sidebar',today:'Today',tasks:'Tasks remaining',habits:'Habits done',focus:'Focus time',shortcuts:'Shortcuts',todo:'Todo',notes:'Notes',focusShort:'Focus',openTab:'Open in full tab ↗'},'zh-CN':{brandSub:'效率侧边栏',openSidebar:'⚡ 打开侧边栏',today:'今日',tasks:'剩余任务',habits:'习惯完成',focus:'专注时长',shortcuts:'快捷键',todo:'待办',notes:'笔记',focusShort:'专注',openTab:'在完整标签页打开 ↗'}};
+function tr(lang,key){return I18N[lang]?.[key]||I18N.en[key]||key}
+function applyLocale(lang){document.getElementById('brandSub').textContent=tr(lang,'brandSub');document.getElementById('openBtn').textContent=tr(lang,'openSidebar');document.getElementById('todayTitle').textContent=tr(lang,'today');document.getElementById('tasksLabel').textContent=tr(lang,'tasks');document.getElementById('habitsLabel').textContent=tr(lang,'habits');document.getElementById('focusLabel').textContent=tr(lang,'focus');document.getElementById('shortcutsTitle').textContent=tr(lang,'shortcuts');document.getElementById('scOpen').textContent=tr(lang,'openSidebar').replace('⚡ ','');document.getElementById('scTodo').textContent=tr(lang,'todo');document.getElementById('scNotes').textContent=tr(lang,'notes');document.getElementById('scFocus').textContent=tr(lang,'focusShort');document.getElementById('openTabLink').textContent=tr(lang,'openTab');}
+
 chrome.storage.local.get('nexusSettings', d => {
+  const lang = d.nexusSettings?.language || 'en';
+  applyLocale(lang);
   if (!d.nexusSettings?.onboardingCompleted) {
     chrome.tabs.create({ url: 'sidebar/welcome.html' });
     window.close();
