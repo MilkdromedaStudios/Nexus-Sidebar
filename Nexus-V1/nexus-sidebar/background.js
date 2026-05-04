@@ -1,10 +1,7 @@
 // Nexus Sidebar - Background Service Worker
-// Handles alarms, context menus, keyboard shortcuts, and side panel management
+// Handles alarms, context menus, keyboard shortcuts, and overlay sidebar messaging
 
 'use strict';
-
-// ─── Side Panel Setup ────────────────────────────────────────────────────────
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
 // ─── Install / Update Handler ─────────────────────────────────────────────────
 chrome.runtime.onInstalled.addListener(async (details) => {
@@ -227,7 +224,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       await addBookmarkFromContext(info, tab);
       break;
     case 'nexus-open':
-      chrome.sidePanel.open({ tabId: tab.id });
+      await sendOverlayCommand(tab.id, 'toggle');
       break;
   }
 });
@@ -398,25 +395,42 @@ async function checkMediaSessions() {
   await chrome.storage.local.set({ nexusMediaSessions: sessions });
 }
 
+
+async function sendOverlayCommand(tabId, command = 'toggle', payload = {}) {
+  if (!tabId) return { ok: false, reason: 'no-tab-id' };
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, {
+      action: 'nexusOverlayControl',
+      command,
+      ...payload
+    });
+
+    if (response?.ok) return response;
+    return { ok: false, reason: response?.reason || 'overlay-unavailable' };
+  } catch (error) {
+    return { ok: false, reason: 'injection-restricted', error: error?.message || 'Unknown tab messaging error' };
+  }
+}
+
 // ─── Keyboard Commands ─────────────────────────────────────────────────────────
 chrome.commands.onCommand.addListener(async (command) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) return;
   switch (command) {
     case 'toggle-sidebar':
-      chrome.sidePanel.open({ tabId: tab.id });
+      await sendOverlayCommand(tab.id, 'toggle');
       break;
     case 'open-todo':
-      chrome.sidePanel.open({ tabId: tab.id });
-      chrome.runtime.sendMessage({ action: 'openPanel', panel: 'todo' }).catch(() => {});
+      await sendOverlayCommand(tab.id, 'toggle');
+      await sendOverlayCommand(tab.id, 'open', { panel: 'todo' });
       break;
     case 'open-notes':
-      chrome.sidePanel.open({ tabId: tab.id });
-      chrome.runtime.sendMessage({ action: 'openPanel', panel: 'notes' }).catch(() => {});
+      await sendOverlayCommand(tab.id, 'toggle');
+      await sendOverlayCommand(tab.id, 'open', { panel: 'notes' });
       break;
     case 'open-pomodoro':
-      chrome.sidePanel.open({ tabId: tab.id });
-      chrome.runtime.sendMessage({ action: 'openPanel', panel: 'pomodoro' }).catch(() => {});
+      await sendOverlayCommand(tab.id, 'toggle');
+      await sendOverlayCommand(tab.id, 'open', { panel: 'pomodoro' });
       break;
   }
 });
@@ -442,9 +456,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       importAllData(msg.data).then(() => sendResponse({ ok: true }));
       return true;
     case 'openSidePanel':
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) chrome.sidePanel.open({ tabId: tabs[0].id });
-        sendResponse({ ok: true });
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+        const activeTab = tabs[0];
+        if (!activeTab?.id) {
+          sendResponse({ ok: false, reason: 'no-active-tab' });
+          return;
+        }
+        const result = await sendOverlayCommand(activeTab.id, 'toggle');
+        sendResponse(result);
       });
       return true;
     case 'setBadge':
