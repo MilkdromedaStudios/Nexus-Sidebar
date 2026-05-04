@@ -25,6 +25,7 @@ const SETTINGS_PANEL = { id: 'settings', label: 'Settings', icon: '⚙️' };
 const MAX_PINNED = 7;
 const DEFAULT_PINNED = ['dashboard','todo','notes','pomodoro','calendar','bookmarks','weather'];
 const POMO_RUNTIME_KEY = 'nexusPomoRuntime';
+const IFRAME_SESSION_KEY = 'nexusIframeSession';
 
 // ─── State ──────────────────────────────────────────────────────
 let S = {
@@ -61,7 +62,82 @@ let S = {
   savedColorsArr: [],
   // news
   newsItems: [],
+  iframeSession: null,
 };
+
+const iframeManager = (() => {
+  const cache = new Map();
+  const blocked = new Set();
+  let activeKey = null;
+  let panelEl = null;
+  let hiddenEl = null;
+  let titleEl = null;
+  let shellEl = null;
+  const keyFromSite = (site) => btoa(unescape(encodeURIComponent(site.url))).replace(/=/g, '');
+
+  function init() {
+    panelEl = qs('#siteEmbedPanel');
+    hiddenEl = qs('#iframeHiddenCache');
+    titleEl = qs('#siteEmbedTitle');
+    shellEl = qs('#siteEmbedShell');
+  }
+  function getOrCreate(site) {
+    const key = keyFromSite(site);
+    if (cache.has(key)) return { key, iframe: cache.get(key) };
+    const iframe = document.createElement('iframe');
+    iframe.className = 'site-embed-iframe';
+    iframe.dataset.siteKey = key;
+    iframe.dataset.siteName = site.name || 'Site';
+    iframe.src = site.url;
+    iframe.addEventListener('load', () => {
+      if (iframe.contentWindow && iframe.contentDocument) return;
+      if (!blocked.has(key)) fallback(site, key);
+    });
+    setTimeout(() => {
+      if (iframe.dataset.loaded === '1') return;
+      // Heuristic: CSP/XFO blocks typically never render.
+      if (!blocked.has(key) && iframe.parentElement === panelEl) fallback(site, key);
+    }, 3500);
+    iframe.addEventListener('load', () => { iframe.dataset.loaded = '1'; });
+    cache.set(key, iframe);
+    return { key, iframe };
+  }
+  function fallback(site, key) {
+    blocked.add(key);
+    saveIframeSession({ siteKey: key, siteName: site.name, siteUrl: site.url, blocked: true, panel: 'dashboard' });
+    showToast(`${site.name} blocked embedding. Opening in tab.`, 'info');
+    window.open(site.url, '_blank', 'noopener,noreferrer');
+  }
+  function open(site) {
+    init();
+    const { key, iframe } = getOrCreate(site);
+    activeKey = key;
+    titleEl.textContent = `Embedded: ${site.name}`;
+    shellEl.classList.add('active');
+    if (iframe.parentElement !== panelEl) panelEl.appendChild(iframe);
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    panelEl.classList.remove('anim-in');
+    void panelEl.offsetWidth;
+    panelEl.classList.add('anim-in');
+    saveIframeSession({ siteKey: key, siteName: site.name, siteUrl: site.url, blocked: false, panel: 'dashboard' });
+  }
+  function hideActiveToCache() {
+    if (!activeKey) return;
+    const iframe = cache.get(activeKey);
+    if (!iframe || iframe.parentElement !== panelEl) return;
+    hiddenEl.appendChild(iframe);
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    shellEl.classList.remove('active');
+  }
+  function restoreFromSession() {
+    if (!S.iframeSession?.siteUrl || S.iframeSession.blocked) return;
+    const site = { name: S.iframeSession.siteName || 'Site', url: S.iframeSession.siteUrl };
+    open(site);
+  }
+  return { open, hideActiveToCache, restoreFromSession };
+})();
 
 const DEFAULTS = {
   theme:'dark', accentColor:'#6C63FF', fontFamily:'Outfit',
@@ -168,6 +244,7 @@ async function loadData() {
     S.bookmarks   = d.nexusBookmarks|| defaultBookmarks();
     S.calEvents   = d.nexusEvents   || [];
     S.savedColorsArr = d.nexusSavedColors || [];
+    S.iframeSession = d[IFRAME_SESSION_KEY] || null;
   } catch {
     S.settings  = { ...DEFAULTS };
     S.todos     = jl('nexusTodos') || [];
@@ -176,6 +253,7 @@ async function loadData() {
     S.bookmarks = jl('nexusBookmarks') || defaultBookmarks();
     S.calEvents = jl('nexusEvents') || [];
     S.savedColorsArr = jl('nexusSavedColors') || [];
+    S.iframeSession = jl(IFRAME_SESSION_KEY);
   }
   S.pinnedPanels = S.settings.pinnedPanels || [...DEFAULT_PINNED];
   await loadPomoRuntime();
@@ -190,6 +268,10 @@ function jl(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { ret
 function saveSetting(key, val) {
   S.settings[key] = val;
   save('nexusSettings', S.settings);
+}
+function saveIframeSession(session) {
+  S.iframeSession = session;
+  save(IFRAME_SESSION_KEY, session);
 }
 
 function applyLayoutPreferences() {
@@ -456,6 +538,7 @@ function closeDrawerOutside(e) {
 
 // ─── Open Panel ──────────────────────────────────────────────────
 function openPanel(id) {
+  if (S.currentPanel === 'dashboard' && id !== 'dashboard') iframeManager.hideActiveToCache();
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById(`panel${cap(id)}`);
   if (panel) panel.classList.add('active');
@@ -491,7 +574,7 @@ function updateHeader(id) {
 
 function onOpen(id) {
   switch(id) {
-    case 'dashboard':  renderDashboard(); break;
+    case 'dashboard':  renderDashboard(); iframeManager.restoreFromSession(); break;
     case 'todo':       renderTodos(); break;
     case 'notes':      renderNotesList(); break;
     case 'calendar':   renderCalendar(); break;
@@ -513,6 +596,9 @@ function onOpen(id) {
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════════════════════════════
 function bindAll() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) iframeManager.hideActiveToCache();
+  });
   // Header buttons
   document.getElementById('btnQuickNote').addEventListener('click', openQuickNote);
   document.getElementById('btnNotifications').addEventListener('click', () => showToast('No new notifications 🔔', 'info'));
@@ -724,10 +810,22 @@ function renderQuickSites() {
   const el = qs('#quickSiteGrid'); if(!el) return;
   const sites = S.settings.quickSites || [];
   el.innerHTML = sites.slice(0,8).map((s,i)=>`
-    <a href="${esc(s.url)}" target="_blank" class="quick-site" title="${esc(s.name)}">
+    <button class="quick-site" data-site-idx="${i}" title="${esc(s.name)}">
       <span class="qs-icon">${s.icon||'🌐'}</span>
       <span class="qs-name">${esc(s.name)}</span>
-    </a>`).join('');
+    </button>`).join('');
+  el.querySelectorAll('.quick-site').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const site = sites[Number(btn.dataset.siteIdx)];
+      if (!site?.url) return;
+      if (S.settings.openOnNewTab) {
+        saveIframeSession({ siteKey: null, siteName: site.name, siteUrl: site.url, blocked: true, panel: 'dashboard' });
+        window.open(site.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      iframeManager.open(site);
+    });
+  });
 }
 
 function renderWeekChart() {
