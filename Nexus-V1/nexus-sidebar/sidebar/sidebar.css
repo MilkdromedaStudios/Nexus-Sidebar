@@ -2508,6 +2508,7 @@ html[data-sidebar-position="left"] .nav-item.active {
   border-bottom: 1px solid var(--border-color);
 }
 .search-result-item:hover { background: var(--bg-hover); }
+.search-result-item.active { background: var(--bg-active); border-left: 2px solid var(--accent); }
 .sri-type { font-size: 16px; }
 .sri-text { font-size: 13px; color: var(--text-primary); }
 .sri-sub { font-size: 10px; color: var(--text-muted); }
