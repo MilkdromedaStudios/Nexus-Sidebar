@@ -21,7 +21,7 @@ Nexus Sidebar is a tile-first productivity extension for Chromium browsers.
 - Onboarding welcome flow with language selection (English + Simplified Chinese)
 
 ### Description
-- The app runs as a sidebar-focused extension UI with persistent local storage.
+- The app runs as a fully custom in-page overlay sidebar renderer with persistent local storage.
 - `Nexus-V1/nexus-sidebar/sidebar/` contains main UI (`sidebar.html`, `sidebar.css`, `sidebar.js`).
 - `Nexus-V1/nexus-sidebar/background.js` manages background lifecycle tasks.
 
@@ -61,3 +61,9 @@ Nexus Sidebar is a tile-first productivity extension for Chromium browsers.
 
 ### Changelog
 - See `CHANGELOG.md` for release history.
+
+
+### Sidebar runtime
+- Uses a fully custom overlay injected via content scripts (not Chrome sidePanel API).
+- Background/popup toggle the overlay through tab message passing.
+- Browser internal pages (e.g. chrome://, edge://) do not allow injection and show a graceful notice in popup.

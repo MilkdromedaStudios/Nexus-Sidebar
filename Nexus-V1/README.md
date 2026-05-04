@@ -16,3 +16,9 @@ If previous PRs were messy/conflicted, use this path only:
 - Full extension source (manifest, background, popup, sidebar, welcome, icons, docs).
 - Onboarding flow with language selection (English + Simplified Chinese).
 - Weather/news improvements and media activity monitor.
+
+
+### Sidebar runtime
+- Uses a fully custom overlay injected via content scripts (not Chrome sidePanel API).
+- Background/popup toggle the overlay through tab message passing.
+- Browser internal pages (e.g. chrome://, edge://) do not allow injection and show a graceful notice in popup.
