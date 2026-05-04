@@ -16,6 +16,7 @@
   .row span:last-child { color:#e8e8f0; font-weight:600; }
   .shortcut { background:#13131e; border-radius:6px; padding:6px 10px; font-size:11px; color:#9898b0; display:flex; justify-content:space-between; margin-bottom:4px; }
   .shortcut kbd { background:#252538; padding:2px 6px; border-radius:4px; font-size:10px; color:#6C63FF; }
+  .status { font-size:11px; color:#ffb4b4; min-height:16px; margin:4px 0 8px; }
   a { color:#6C63FF; font-size:11px; text-decoration:none; display:block; text-align:center; margin-top:8px; }
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&display=swap" rel="stylesheet"/>
@@ -26,7 +27,8 @@
   <div><h1>Nexus</h1><p>Productivity Sidebar</p></div>
 </div>
 
-<button id="openBtn">⚡ Open Sidebar</button>
+<button id="openBtn">⚡ Toggle Sidebar</button>
+<div id="status" class="status"></div>
 
 <div class="sec" id="statsBox">
   <h3>Today</h3>
@@ -46,6 +48,8 @@
 <a href="sidebar/sidebar.html" target="_blank">Open in full tab ↗</a>
 
 <script>
+const statusEl = document.getElementById('status');
+
 chrome.storage.local.get('nexusSettings', d => {
   if (!d.nexusSettings?.onboardingCompleted) {
     chrome.tabs.create({ url: 'sidebar/welcome.html' });
@@ -55,7 +59,17 @@ chrome.storage.local.get('nexusSettings', d => {
 
 document.getElementById('openBtn').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({active:true,currentWindow:true});
-  if (tab) chrome.sidePanel.open({tabId:tab.id});
+  if (!tab?.id) {
+    statusEl.textContent = 'No active tab found.';
+    return;
+  }
+
+  const result = await chrome.runtime.sendMessage({ action: 'openSidePanel' });
+  if (!result?.ok) {
+    statusEl.textContent = 'Sidebar is unavailable here. Browser internal pages block extension overlays.';
+    return;
+  }
+
   window.close();
 });
 

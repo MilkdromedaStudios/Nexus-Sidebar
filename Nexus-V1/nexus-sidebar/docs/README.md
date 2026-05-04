@@ -20,6 +20,8 @@ Click ⋯ More in the nav → use 📍 to pin/unpin panels. Max 7 pinned at once
 ## 10 Themes
 Dark · Light · Glass · Glass Dark · Retrowave · Neon · Ocean · Forest · Nord · Dracula
 
-## Static Checks
-- Run `./scripts/check-no-github-promos.sh` before commit/PR.
-- This check fails if shipped UI templates/defaults reintroduce hardcoded GitHub promo links or default entries.
+
+### Sidebar runtime
+- Uses a fully custom overlay injected via content scripts (not Chrome sidePanel API).
+- Background/popup toggle the overlay through tab message passing.
+- Browser internal pages (e.g. chrome://, edge://) do not allow injection and show a graceful notice in popup.
