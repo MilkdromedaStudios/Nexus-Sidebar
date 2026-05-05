@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Nexus Sidebar Next",
   "short_name": "NexusNext",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0.1",
   "description": "Modular Nexus Sidebar implementation path.",
   "permissions": ["storage", "sidePanel"],
   "background": { "service_worker": "background.js", "type": "module" },
