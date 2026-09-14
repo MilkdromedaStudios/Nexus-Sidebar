@@ -2,6 +2,8 @@
 
 Nexus Sidebar is a Chromium Manifest V3 extension that combines a persistent, customizable web sidebar with a productivity-focused new tab.
 
+**Author:** Numberstring Productions
+
 ## Features
 - Dark + Neon defaults, Fluent/Glass/Borderless styles, floating icons and custom CSS
 - Auto-hide sidebar with configurable delay and reveal zone
