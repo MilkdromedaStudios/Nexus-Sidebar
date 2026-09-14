@@ -1,41 +1,26 @@
-# Nexus Sidebar (Active: Modular V2 Path)
+# Nexus Sidebar: All your needs in one place
 
-This repository now routes active implementation and docs to:
+Nexus Sidebar is a Chromium Manifest V3 extension that combines a persistent, customizable web sidebar with a productivity-focused new tab.
 
-Primary extension path:
-- `Nexus-V1/nexus-sidebar/`
+## Features
+- Dark + Neon defaults, Fluent/Glass/Borderless styles, floating icons and custom CSS
+- Auto-hide sidebar with configurable delay and reveal zone
+- Persistent live site panels with browser-session support
+- Custom sites and favicons
+- Launchpad greeting, search, clock/date, weather, daily quote and quick actions
+- Browser history, calculator and saved mini-games
+- Blocklist / allowlist / all-sites / disabled visibility modes with wildcard patterns
+- Custom new tab with procedural starfield, search engines, widgets, focus timer and quick links
+- New-tab backgrounds: stars, image, uploaded image, website, gradient or solid color
+- Local customization via `chrome.storage.local`
 
----
+## Install
+1. Clone/download the repo.
+2. Open your Chromium browser's Extensions page.
+3. Enable Developer mode.
+4. Choose **Load unpacked** and select this folder.
 
-## Functions & Description
+Previous versions of this repository are preserved under [`archive/`](archive/).
 
-Nexus Sidebar is a tile-first productivity extension for Chromium browsers.
-
-### Core functions
-- Dashboard with greeting, stats, quick sites, and mini widgets
-- Todo / Notes / Calendar / Pomodoro productivity workflow
-- Bookmarks / Weather / Clock / Calculator / Habits tools
-- Password generator / Color picker / Unit converter / News panel
-- Theme and layout customization from Settings
-- Background worker support for alarms, notifications, context menus, and commands
-- Onboarding welcome flow with language selection (English + Simplified Chinese)
-
-### Description
-- The app runs as a fully custom in-page overlay sidebar renderer with persistent local storage.
-- `Nexus-V1/nexus-sidebar/sidebar/` contains main UI (`sidebar.html`, `sidebar.css`, `sidebar.js`).
-- `Nexus-V1/nexus-sidebar/background.js` manages background lifecycle tasks.
-
----
-
-Legacy reference (frozen, no active feature work):
-
-- `Nexus-V1/nexus-sidebar/`
-
-### Changelog
-- See `CHANGELOG.md` for release history.
-
-
-### Sidebar runtime
-- Uses a fully custom overlay injected via content scripts (not Chrome sidePanel API).
-- Background/popup toggle the overlay through tab message passing.
-- Browser internal pages (e.g. chrome://, edge://) do not allow injection and show a graceful notice in popup.
+## License
+MIT

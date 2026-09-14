@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Sidebar: All your needs in one place",
+  "version": "15.0.0",
+  "description": "A customizable sidebar workspace and productivity new-tab dashboard.",
+  "permissions": ["storage","history","tabs","activeTab","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings"],
+  "host_permissions": ["<all_urls>"],
+  "background": {"service_worker":"service-worker.js"},
+  "action": {"default_title":"Show Nexus Sidebar","default_icon":{"16":"icons/icon.png","32":"icons/icon.png"}},
+  "icons": {"16":"icons/icon.png","32":"icons/icon.png","48":"icons/icon.png","128":"icons/icon.png"},
+  "web_accessible_resources": [{"resources":["_favicon/*"],"matches":["<all_urls>"]}],
+  "content_scripts": [
+    {"matches":["<all_urls>"],"css":["styles/base.css","styles/themes.css"],"js":["src/core.js","src/sites.js","src/apps.js","src/games.js","src/settings.js"],"run_at":"document_start","all_frames":false,"match_about_blank":true},
+    {"matches":["http://*/*","https://*/*"],"js":["frame-session-bridge.js"],"run_at":"document_start","all_frames":true}
+  ],
+  "chrome_url_overrides": {"newtab":"newtab.html"}
+}
