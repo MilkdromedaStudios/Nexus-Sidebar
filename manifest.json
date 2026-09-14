@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Nexus Sidebar: All your needs in one place",
-  "version": "15.0.0",
-  "description": "A customizable sidebar workspace and productivity new-tab dashboard.",
+  "version": "15.0.1",
+  "description": "Customizable sidebar workspace and productivity new-tab dashboard.",
+  "author": "Numberstring Productions",
   "permissions": ["storage","history","tabs","activeTab","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings"],
   "host_permissions": ["<all_urls>"],
   "background": {"service_worker":"service-worker.js"},
