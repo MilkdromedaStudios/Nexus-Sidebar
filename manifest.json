@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nexus Sidebar: All your needs in one place",
-  "version": "16.0.0",
+  "version": "16.1.0",
   "description": "Customizable sidebar workspace and productivity new-tab dashboard.",
   "author": "Numberstring Productions",
   "permissions": ["storage","history","tabs","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings"],
