@@ -4,7 +4,7 @@ importScripts('service-worker.js', 'pomodoro-worker.js', 'update-monitor.js');
 chrome.action.onClicked.addListener(async tab => {
   if (!tab?.id || !/^(https?|file):/i.test(tab.url || '')) return;
   try {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['styles/refine.css'] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/update-ui.js'] });
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['styles/refine.css', 'styles/controls-autohide.css'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/update-ui.js', 'src/controls-autohide.js'] });
   } catch {}
 });
