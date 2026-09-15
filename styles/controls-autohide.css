@@ -1,0 +1,25 @@
+/* Keep Hide + Settings visually synchronized with sidebar auto-hide. */
+#nexus-corner-controls{
+  opacity:0!important;
+  transform:translateX(-125%)!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+  transition:opacity .16s ease,transform .16s ease,visibility 0s linear .16s!important;
+}
+#nexus-root.edge-right #nexus-corner-controls{
+  left:auto!important;
+  right:10px!important;
+  transform:translateX(125%)!important;
+}
+#nexus-root.rail-visible #nexus-corner-controls,
+#nexus-root:not(.dark).rail-visible #nexus-corner-controls{
+  opacity:1!important;
+  transform:translateX(0)!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+  transition:opacity .16s ease,transform .16s ease,visibility 0s!important;
+}
+/* Auto-hide disabled means controls stay available, just like the main rail. */
+#nexus-root:not(.session-hidden):not(.rail-visible) #nexus-corner-controls{
+  will-change:transform,opacity;
+}
