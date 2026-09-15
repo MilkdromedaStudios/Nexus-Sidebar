@@ -122,7 +122,6 @@ document.addEventListener('nexus:ready', () => {
     const qa = document.createElement('div');
     qa.className = 'nexus-quick';
     [
-      ['＋', 'New tab', () => N.msg({ type: 'nexus:new-tab' })],
       ['↻', 'Reload', () => N.msg({ type: 'nexus:reload' })],
       ['◷', 'History', () => N.activate(N.FEATURES.find(x => x.id === 'history'))],
       ['25', 'Focus', () => N.activate(N.FEATURES.find(x => x.id === 'pomodoro'))],
