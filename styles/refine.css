@@ -1,0 +1,44 @@
+/* v16.2 refined sidebar controls */
+#nexus-corner-controls{
+  position:fixed!important;left:10px!important;bottom:12px!important;z-index:3!important;
+  display:flex!important;flex-direction:column!important;gap:3px!important;padding:4px!important;
+  border:1px solid var(--nexus-line)!important;border-radius:9px!important;background:var(--nexus-bg)!important;
+  box-shadow:0 9px 24px rgba(0,0,0,.24)!important;pointer-events:auto!important;
+}
+#nexus-corner-controls .nexus-icon{width:34px!important;height:34px!important;min-height:34px!important}
+#nexus-corner-controls #nexus-session-hide{color:#9298a4!important}
+#nexus-corner-controls #nexus-session-hide:hover{color:#f0b8b8!important;background:rgba(220,70,70,.1)!important}
+#nexus-corner-controls #nexus-settings:hover{color:var(--nexus-text)!important}
+
+.nexus-line-icon{width:var(--nexus-icon)!important;height:var(--nexus-icon)!important;display:grid!important;place-items:center!important}
+.nexus-line-icon svg,#nexus-corner-controls svg,#nexus-close svg{
+  width:100%!important;height:100%!important;fill:none!important;stroke:currentColor!important;stroke-width:1.7!important;
+  stroke-linecap:round!important;stroke-linejoin:round!important;display:block!important;
+}
+#nexus-corner-controls svg{width:18px!important;height:18px!important}
+#nexus-close svg{width:16px!important;height:16px!important}
+#nexus-head-icon .nexus-line-icon{width:20px!important;height:20px!important}
+
+#nexus-icons>.nexus-rail-group{gap:4px!important}
+.nexus-icon{position:relative!important}
+.nexus-icon .nexus-line-icon{transition:transform .12s ease,opacity .12s ease!important}
+.nexus-icon:hover .nexus-line-icon{transform:translateY(-1px)!important}
+#nexus-root.edit-mode .nexus-icon.nexus-draggable{outline:1px dashed rgba(255,255,255,.28)!important;outline-offset:-2px!important}
+
+.nexus-timer-icon{height:45px!important;min-height:45px!important;display:flex!important;flex-direction:column!important;gap:1px!important;padding:4px 0 3px!important}
+.nexus-timer-icon .nexus-line-icon{width:17px!important;height:17px!important}
+.nexus-timer-mini{font-size:7.5px!important;line-height:1!important;letter-spacing:.01em!important;color:var(--nexus-muted)!important;font-variant-numeric:tabular-nums!important}
+.nexus-timer-icon.timer-running .nexus-timer-mini{color:var(--nexus-accent)!important;font-weight:700!important}
+.nexus-timer-icon.timer-running:after{content:''!important;position:absolute!important;right:4px!important;top:4px!important;width:4px!important;height:4px!important;border-radius:50%!important;background:var(--nexus-accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--nexus-accent) 18%,transparent)!important}
+
+.nexus-pomodoro{display:flex!important;flex-direction:column!important;align-items:center!important;gap:12px!important;padding:30px 18px!important}
+.nexus-pomodoro-clock{font-size:58px!important;line-height:1!important;font-weight:760!important;letter-spacing:-.045em!important;font-variant-numeric:tabular-nums!important}
+.nexus-pomodoro-status{font-size:12px!important;color:var(--nexus-muted)!important;text-transform:uppercase!important;letter-spacing:.1em!important}
+.nexus-pomodoro-actions,.nexus-pomodoro-presets{display:flex!important;gap:8px!important;flex-wrap:wrap!important;justify-content:center!important}
+.nexus-pomodoro button{border:1px solid var(--nexus-line)!important;border-radius:7px!important;background:var(--nexus-surface)!important;color:var(--nexus-text)!important;padding:9px 14px!important;cursor:pointer!important}
+.nexus-pomodoro [data-toggle]{background:var(--nexus-accent)!important;border-color:transparent!important;color:#fff!important;min-width:92px!important}
+.nexus-pomodoro p{max-width:330px!important;margin:6px 0 0!important;text-align:center!important;color:var(--nexus-muted)!important;font-size:11px!important;line-height:1.5!important}
+
+@media(max-width:600px){
+  #nexus-corner-controls{left:8px!important;bottom:8px!important}
+}
