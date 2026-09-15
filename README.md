@@ -1,28 +1,29 @@
 # Nexus Sidebar: All your needs in one place
 
-Nexus Sidebar is a Chromium Manifest V3 extension that combines a persistent, customizable web sidebar with a productivity-focused new tab.
+**Author: Numberstring Productions**
 
-**Author:** Numberstring Productions
+Nexus Sidebar is a Chromium Manifest V3 extension with a customizable floating sidebar and productivity new tab.
 
-## Features
-- Dark + Neon defaults, Fluent/Glass/Borderless styles, floating icons and custom CSS
-- Auto-hide sidebar with configurable delay and reveal zone
-- Persistent live site panels with browser-session support
-- Custom sites and favicons
-- Launchpad greeting, search, clock/date, weather, daily quote and quick actions
-- Browser history, calculator and saved mini-games
-- Blocklist / allowlist / all-sites / disabled visibility modes with wildcard patterns
-- Custom new tab with procedural starfield, search engines, widgets, focus timer and quick links
-- New-tab backgrounds: stars, image, uploaded image, website, gradient or solid color
-- Local customization via `chrome.storage.local`
+## v16 highlights
+- Modern, restrained default UI with smaller corner radii and no glow outside the optional Neon theme
+- Floating **rail groups** by default: separators split icons into independent floating rails
+- Edit mode with drag-and-drop icon and separator ordering
+- Add/remove separators and individually hide built-in or custom-site icons
+- Toolbar recovery even when **Never show automatically** is selected
+- **Hide for this session** utility button
+- Panels stay open until explicitly closed or you click outside them
+- New **Apex GP** 3D F1 sprint racer with steering, throttle, braking, DRS boost, AI cars, laps, position and best times
+- GitHub version checker every six hours with an UPDATE badge when a newer version is published
+- Previous `archive/` content removed from the current repository
+
+## Updating
+Chromium does not allow an extension to silently replace or reinstall its own code from GitHub. Nexus therefore checks GitHub for newer versions and surfaces an update notice/link. Store-installed releases use the browser's normal extension update system.
 
 ## Install
-1. Clone/download the repo.
+1. Download or clone this repository.
 2. Open your Chromium browser's Extensions page.
 3. Enable Developer mode.
 4. Choose **Load unpacked** and select this folder.
-
-Previous versions of this repository are preserved under [`archive/`](archive/).
 
 ## License
 MIT
