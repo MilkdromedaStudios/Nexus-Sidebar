@@ -1,5 +1,5 @@
 'use strict';
-importScripts('service-worker.js', 'pomodoro-worker.js', 'update-monitor.js', 'next-level-worker.js', 'next-level-extras-worker.js', 'next-level-persistence.js');
+importScripts('service-worker.js', 'pomodoro-worker.js', 'update-monitor.js', 'next-level-worker.js', 'next-level-extras-worker.js', 'next-level-persistence.js', 'next-level-label-worker.js');
 
 chrome.action.onClicked.addListener(async tab => {
   if (!tab?.id || !/^(https?|file):/i.test(tab.url || '')) return;
