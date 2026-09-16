@@ -1,0 +1,10 @@
+/* Nexus v17.1.1 interaction fixes */
+.nxv1711-calc-live{
+  width:calc(100% - 24px);margin:0 12px 8px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--nexus-accent) 38%,var(--nexus-line));
+  border-radius:10px;background:color-mix(in srgb,var(--nexus-accent) 9%,var(--nexus-surface));color:var(--nexus-text);
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;text-align:left;cursor:pointer;
+}
+.nxv1711-calc-live[hidden]{display:none!important}
+.nxv1711-calc-live>span{font-size:8px;font-weight:800;letter-spacing:.12em;color:var(--nexus-accent)}
+.nxv1711-calc-live>b{font-size:22px;line-height:1;font-variant-numeric:tabular-nums}
+.nxv1711-calc-live>small{font-size:9px;color:var(--nexus-muted)}

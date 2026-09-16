@@ -1,0 +1,66 @@
+/* Nexus Liquid Glass theme — rendering is provided by vendored liquidGL v2.2.4. */
+#nexus-root.theme-liquid-glass{
+  --nexus-bg:rgba(16,20,30,.16);
+  --nexus-surface:rgba(255,255,255,.075);
+  --nexus-line:rgba(255,255,255,.22);
+  --nexus-text:#f8fbff;
+  --nexus-muted:rgba(235,242,255,.70);
+}
+#nexus-root.theme-liquid-glass #nexus-panel{
+  background:rgba(15,20,30,.10)!important;
+  border-color:rgba(255,255,255,.28)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 26px 70px rgba(0,0,0,.22)!important;
+}
+#nexus-root.theme-liquid-glass .nexus-rail-group{
+  background:rgba(15,20,30,.08)!important;
+  border-color:rgba(255,255,255,.25)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 12px 30px rgba(0,0,0,.18)!important;
+}
+#nexus-root.theme-liquid-glass #nexus-corner-controls{
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.22));
+}
+#nexus-root.theme-liquid-glass .nexus-icon,
+#nexus-root.theme-liquid-glass #nexus-close,
+#nexus-root.theme-liquid-glass #nexus-head button{
+  text-shadow:0 1px 5px rgba(0,0,0,.35)!important;
+}
+#nexus-root.theme-liquid-glass .nexus-icon:hover,
+#nexus-root.theme-liquid-glass .nexus-icon.active{
+  background:rgba(255,255,255,.13)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18)!important;
+}
+#nexus-root.theme-liquid-glass .nexus-settings-section,
+#nexus-root.theme-liquid-glass .nx-section,
+#nexus-root.theme-liquid-glass .nexus-card,
+#nexus-root.theme-liquid-glass .nx-card,
+#nexus-root.theme-liquid-glass .nexus-hero{
+  background:rgba(14,20,31,.23)!important;
+  border-color:rgba(255,255,255,.16)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+#nexus-root.theme-liquid-glass .nexus-search,
+#nexus-root.theme-liquid-glass .nx-input,
+#nexus-root.theme-liquid-glass .nx-textarea,
+#nexus-root.theme-liquid-glass .nx-btn,
+#nexus-root.theme-liquid-glass .nexus-inline-actions button{
+  background:rgba(255,255,255,.08)!important;
+  border-color:rgba(255,255,255,.17)!important;
+}
+#nexus-root.theme-liquid-glass #nexus-head{
+  border-bottom-color:rgba(255,255,255,.16)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015))!important;
+}
+
+.nexus-liquidgl-lens{
+  position:fixed!important;
+  z-index:2147483644!important;
+  pointer-events:none!important;
+  display:none;
+  background:rgba(255,255,255,.055)!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+  box-sizing:border-box!important;
+  overflow:hidden!important;
+}
+.nexus-liquidgl-lens[data-kind="panel"]{border-radius:var(--nexus-liquid-panel-radius,10px)!important}
+.nexus-liquidgl-lens[data-kind="rail"]{border-radius:10px!important}
+.nexus-liquidgl-lens[data-kind="controls"]{border-radius:10px!important}
