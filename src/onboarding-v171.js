@@ -25,7 +25,7 @@
           </section>
           <section hidden>
             <span class="nxv2-tutorial-icon">Aa</span><h2>Select or right-click</h2>
-            <p>Select text for quick actions, or right-click anywhere to use Nexus’s own menu: Define, Ask AI, Notes, Search, Markdown, Focus, screenshots, and more.</p>
+            <p>Select text for quick actions, or right-click anywhere to use Nexus’s own menu: Define, Notes, Search, Markdown, Focus, screenshots, and more.</p>
             <label><input type="checkbox" data-context checked> Use Nexus custom right-click menu</label>
             <label><input type="checkbox" data-selection checked> Show actions when text is selected</label>
           </section>
@@ -39,7 +39,7 @@
             <span class="nxv2-tutorial-icon">✦</span><h2>Nexus is edge-first</h2>
             <p>With auto-hide on, move your cursor all the way to the selected screen edge to reveal Nexus. The trigger strip is only 2 pixels wide.</p>
             <label><input type="checkbox" data-sites checked> Show custom website tabs in the sidebar</label>
-            <p class="nxv2-muted">Nexus AI is now the Hub. It handles browser commands locally and hands open-ended AI questions to ChatGPT.</p>
+            <p class="nxv2-muted">Use <kbd>Ctrl</kbd> + <kbd>Space</kbd> as the main launcher for Nexus tools and commands.</p>
           </section>
         </div>
         <div class="nxv2-tutorial-actions"><button data-skip>Skip</button><div><button data-back disabled>Back</button><button data-next>Next</button></div></div>
