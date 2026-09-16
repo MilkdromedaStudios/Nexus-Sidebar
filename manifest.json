@@ -4,7 +4,7 @@
   "version": "17.0.0",
   "description": "Browser productivity workspace with Nexus Hub, focus, tabs, notes, tools and contextual actions.",
   "author": "Numberstring Productions",
-  "permissions": ["storage","history","tabs","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings","notifications","contextMenus","bookmarks","downloads","sessions","topSites","tabGroups","clipboardRead","clipboardWrite"],
+  "permissions": ["storage","history","tabs","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings","notifications","contextMenus","bookmarks","downloads","downloads.open","sessions","topSites","tabGroups","clipboardRead","clipboardWrite"],
   "host_permissions": ["<all_urls>"],
   "background": {"service_worker":"background.js"},
   "action": {"default_title":"Show Nexus Sidebar","default_icon":{"16":"icons/icon.png","32":"icons/icon.png"}},
