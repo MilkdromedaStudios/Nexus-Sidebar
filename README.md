@@ -1,6 +1,4 @@
-# Nexus Sidebar: All your needs in one place
-
-**Author: Numberstring Productions**
+# 🪼Nexus Sidebar: All your needs in one place
 
 Nexus Sidebar is a Chromium Manifest V3 extension with a customizable floating sidebar and productivity new tab.
 
@@ -21,7 +19,7 @@ Chromium does not allow an extension to silently replace or reinstall its own co
 
 ## Install
 1. Download or clone this repository.
-2. Open your Chromium browser's Extensions page.
+2. Open your Chromium browser's Extensions page(usualy at chrome://extensions).
 3. Enable Developer mode.
 4. Choose **Load unpacked** and select this folder.
 
