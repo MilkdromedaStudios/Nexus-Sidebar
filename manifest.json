@@ -17,7 +17,7 @@
   },
   "web_accessible_resources": [{"resources":["_favicon/*"],"matches":["<all_urls>"]}],
   "content_scripts": [
-    {"matches":["<all_urls>"],"css":["styles/base.css","styles/themes.css","styles/refine.css","styles/controls-autohide.css","styles/nexus-suite.css","styles/interaction-v2.css"],"js":["src/core.js","src/sites.js","src/apps.js","src/games.js","src/settings.js","src/update-ui.js","src/controls-autohide.js","src/interaction-command.js","src/nexus-suite.js","src/nexus-suite-enhancements.js","src/custom-context-v2.js","src/onboarding-v171.js"],"run_at":"document_start","all_frames":false,"match_about_blank":true},
+    {"matches":["<all_urls>"],"css":["styles/base.css","styles/themes.css","styles/refine.css","styles/controls-autohide.css","styles/nexus-suite.css","styles/interaction-v2.css"],"js":["src/core.js","src/sites.js","src/apps.js","src/games.js","src/settings.js","src/update-ui.js","src/controls-autohide.js","src/interaction-command.js","src/shortcut-compat-v171.js","src/nexus-suite.js","src/nexus-suite-enhancements.js","src/custom-context-v2.js","src/onboarding-v171.js"],"run_at":"document_start","all_frames":false,"match_about_blank":true},
     {"matches":["http://*/*","https://*/*"],"js":["frame-session-bridge.js"],"run_at":"document_start","all_frames":true}
   ],
   "chrome_url_overrides": {"newtab":"newtab.html"}
