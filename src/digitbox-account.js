@@ -53,6 +53,11 @@
     window.addEventListener('storage', event => { if (event.key === WEBSITE_AUTH_KEY) send(); });
     window.addEventListener('digitbox:cloud-auth-updated', send);
     setTimeout(send, 900);
+    const poll = setInterval(async () => {
+      if (!N.accountLocked) return clearInterval(poll);
+      await send();
+    }, 1500);
+    window.addEventListener('pagehide', () => clearInterval(poll), { once:true });
   }
 
   async function refresh(N, force = false) {
@@ -75,11 +80,12 @@
     N.root.classList.remove('rail-visible', 'session-hidden');
     try { sessionStorage.removeItem('nexus-session-hidden'); } catch {}
     N.panel.classList.remove('open');
-    showGate(N);
+    if (isDigitBoxPage()) removeGate(N); else showGate(N);
     paintProfileButton(N);
   }
 
   function showGate(N) {
+    if (isDigitBoxPage()) return removeGate(N);
     let gate = N.root.querySelector('#nexus-account-gate');
     if (!gate) {
       gate = document.createElement('section');
