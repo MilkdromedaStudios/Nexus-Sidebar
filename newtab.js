@@ -43,29 +43,36 @@
   let raf = 0;
   let stars = [];
   let accountUser = null;
+  let guestMode = true;
   let initialized = false;
   let initializing = false;
 
-  async function requireDigitBox() {
-    const status = await msg({ type: 'nexus:digitbox-status', force: true });
-    if (status?.signedIn && status.user) {
-      accountUser = status.user;
-      document.getElementById('newtab-account-gate')?.remove();
-      return true;
-    }
-    showAccountGate();
-    return false;
+  async function checkDigitBox(force = false) {
+    const status = await msg({ type: 'nexus:digitbox-status', force });
+    accountUser = status?.signedIn ? (status.user || null) : null;
+    guestMode = !status?.signedIn;
+    document.body.classList.toggle('guest-mode', guestMode);
+    paintAccountBanner();
+    return !guestMode;
   }
 
-  function showAccountGate() {
-    let gate = document.getElementById('newtab-account-gate');
-    if (gate) return;
-    gate = document.createElement('div');
-    gate.id = 'newtab-account-gate';
-    gate.innerHTML = '<div class="newtab-account-card"><div class="newtab-account-mark">N</div><small>NEXUS SIDEBAR</small><h2>Sign in with DigitBox</h2><p>Your DigitBox account is required to use the Nexus workspace.</p><button data-login>Continue to DigitBox</button><button class="secondary" data-check>I\'ve signed in · Check again</button></div>';
-    document.body.append(gate);
-    gate.querySelector('[data-login]').onclick = () => msg({ type: 'nexus:digitbox-open-login' });
-    gate.querySelector('[data-check]').onclick = () => init();
+  function paintAccountBanner() {
+    let banner = document.getElementById('newtab-account-banner');
+    if (!guestMode) {
+      banner?.remove();
+      return;
+    }
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'newtab-account-banner';
+      banner.innerHTML = '<div><b>Guest mode</b><span>Search + bookmarks are available. Sign in for tasks, focus, notes, weather, customization, and full Nexus.</span></div><button>Sign in with DigitBox</button>';
+      document.body.append(banner);
+      banner.querySelector('button').onclick = async () => {
+        const url = 'https://digitbox.dev/login?next=/profile';
+        const result = await msg({ type: 'nexus:open-tab', url });
+        if (!result?.ok) window.open(url, '_blank', 'noopener,noreferrer');
+      };
+    }
   }
 
   function hello() {
@@ -385,8 +392,36 @@
     $('widgets').append(a);
   }
 
+  async function bookmarksWidget() {
+    const a = widget('Bookmarks', true);
+    const list = document.createElement('div');
+    list.className = 'quick';
+    a.append(list);
+    $('widgets').append(a);
+    const r = await msg({ type: 'nexus:next:bookmarks', query: '' });
+    const flat = [];
+    const walk = items => (items || []).forEach(x => { if (x.url) flat.push(x); if (x.children) walk(x.children); });
+    walk(r?.items || []);
+    flat.slice(0, 18).forEach(x => {
+      const link = document.createElement('a');
+      link.href = x.url;
+      link.textContent = x.title || x.url;
+      list.append(link);
+    });
+    if (!list.children.length) {
+      const empty = document.createElement('div');
+      empty.className = 'task-empty';
+      empty.textContent = 'No bookmarks yet.';
+      list.append(empty);
+    }
+  }
+
   function renderWidgets() {
     $('widgets').replaceChildren();
+    if (guestMode) {
+      bookmarksWidget();
+      return;
+    }
     if (c.widgets.tasks) tasksWidget();
     if (c.widgets.focus) focusWidget();
     if (c.widgets.notes) notesWidget();
@@ -477,7 +512,7 @@
   async function init() {
     if (initialized || initializing) return;
     initializing = true;
-    if (!await requireDigitBox()) { initializing = false; return; }
+    await checkDigitBox(true);
     initialized = true;
     initializing = false;
     const v = await get({ nexusNewtab: D, nexusSettings: {}, nexusFocus: null, nexusTasks: [], nexusNotes: '' });
@@ -549,10 +584,27 @@
   }
 
   const recheckAccount = async () => {
-    const ok = await requireDigitBox();
-    if (ok && !initialized) init();
+    const wasGuest = guestMode;
+    await checkDigitBox(true);
+    if (!initialized) return init();
+    if (wasGuest !== guestMode) {
+      clock();
+      renderWidgets();
+    }
   };
+  chrome.runtime.onMessage.addListener(message => {
+    if (message?.type !== 'nexus:digitbox-auth-changed') return;
+    const wasGuest = guestMode;
+    guestMode = !message.signedIn;
+    accountUser = message.signedIn ? (message.user || null) : null;
+    document.body.classList.toggle('guest-mode', guestMode);
+    paintAccountBanner();
+    if (initialized && wasGuest !== guestMode) {
+      clock();
+      renderWidgets();
+    }
+  });
   window.addEventListener('focus', recheckAccount);
-  setInterval(recheckAccount, 5 * 60 * 1000);
+  setInterval(recheckAccount, 30 * 1000);
   init();
 })();
