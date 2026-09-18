@@ -80,6 +80,14 @@
     N.root.classList.remove('rail-visible', 'session-hidden');
     try { sessionStorage.removeItem('nexus-session-hidden'); } catch {}
     N.panel.classList.remove('open');
+    const palette = N.root.querySelector('#nexus-universal-command-v2');
+    if (palette) palette.hidden = true;
+    const shortcutMenu = N.root.querySelector('#nexus-shortcut-menu');
+    if (shortcutMenu) shortcutMenu.hidden = true;
+    const contextMenu = document.getElementById('nexus-smart-context-v2');
+    const selectionBubble = document.getElementById('nexus-selection-bubble-v2');
+    if (contextMenu) contextMenu.hidden = true;
+    if (selectionBubble) selectionBubble.hidden = true;
     if (isDigitBoxPage()) removeGate(N); else showGate(N);
     paintProfileButton(N);
   }
