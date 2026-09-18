@@ -68,13 +68,13 @@
       };
     }
 
-    N.cleanup?.push?.(() => {
+    window.addEventListener('pagehide', () => {
       observer.disconnect();
       resizeObserver?.disconnect();
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
       cancelAnimationFrame(raf);
-    });
+    }, { once:true });
 
     update();
     setTimeout(update, 120);
