@@ -2,18 +2,24 @@
   'use strict';
   if (window.__nexusSidebarShortcutPickerLoaded) return;
   window.__nexusSidebarShortcutPickerLoaded = true;
-  const start = () => setTimeout(install, 60);
-  if (window.NexusSidebar) start();
-  document.addEventListener('nexus:ready', start, { once:true });
 
   const CATEGORY = {core:'Command',tabs:'Tabs',workspaces:'Workspaces',planner:'Planner',focus:'Focus',notes:'Notes',capture:'Capture',dev:'Developer',page:'Inspector',library:'Library',system:'System'};
   const ICON = {core:'sparkle',tabs:'history',workspaces:'home',planner:'home',focus:'timer',notes:'home',capture:'sparkle',dev:'sparkle',page:'sparkle',library:'history',system:'settings',profile:'home'};
   const slug = value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,52);
 
+  const start = () => setTimeout(install, 60);
+  if (window.NexusSidebar) start();
+  document.addEventListener('nexus:ready', start, { once:true });
+
   async function install() {
     const N = window.NexusSidebar;
     if (!N || N.__shortcutPickerInstalled) return;
     N.__shortcutPickerInstalled = true;
+
+    // Remove the old floating picker if this page was upgraded in place.
+    N.root.querySelector('#nexus-shortcut-picker')?.remove();
+    N.root.querySelector('#nexus-shortcut-menu')?.remove();
+
     const saved = await N.storeGet({ nexusSidebarShortcuts: [] });
     N.sidebarShortcuts = Array.isArray(saved.nexusSidebarShortcuts) ? saved.nexusSidebarShortcuts : [];
     N.shortcutItems = new Map();
@@ -30,7 +36,32 @@
         return previousActivate(item, custom);
       };
     }
-    installPickerButton(N);
+
+    N.sidebarShortcutManager = {
+      catalog: () => catalog().map(item => {
+        const record = recordFor(item);
+        return { ...item, id:record.id, added:N.shortcutItems.has(record.id) };
+      }),
+      added: () => [...N.shortcutItems.values()].map(x => ({ ...x })),
+      add: async id => {
+        if (N.isGuest) {
+          N.showMemberPrompt?.('Sidebar shortcuts','Sign in with DigitBox to add feature shortcuts.');
+          return false;
+        }
+        const item = catalog().find(x => recordFor(x).id === id);
+        if (!item) return false;
+        register(N, recordFor(item), false);
+        await save(N);
+        return true;
+      },
+      remove: async id => {
+        if (!N.shortcutItems.has(id)) return false;
+        unregister(N, id, false);
+        await save(N);
+        return true;
+      }
+    };
+
     N.normalizeLayout?.();
     N.renderRail?.();
   }
@@ -52,6 +83,7 @@
     const suite = (window.NexusSuite?.features || [])
       .filter(([name,key]) => key !== 'assistant' && !/Nexus Assistant|Nexus AI/i.test(name))
       .map(([name,key]) => ({ name, key, desc:CATEGORY[key] || 'Nexus feature' }));
+
     const seen = new Set();
     return [...featured, ...suite].filter(item => {
       const id = item.key + ':' + item.name.toLowerCase();
@@ -62,7 +94,12 @@
   }
 
   function recordFor(item) {
-    return { id:'shortcut-' + slug(item.key + '-' + item.name), name:item.name, toolKey:item.key, icon:ICON[item.key] || 'sparkle' };
+    return {
+      id:'shortcut-' + slug(item.key + '-' + item.name),
+      name:item.name,
+      toolKey:item.key,
+      icon:ICON[item.key] || 'sparkle'
+    };
   }
 
   function register(N, record, persist=true) {
@@ -77,79 +114,19 @@
 
   function unregister(N, id, persist=true) {
     N.shortcutItems.delete(id);
-    const i = N.FEATURES.findIndex(x => x.id === id);
-    if (i >= 0) N.FEATURES.splice(i, 1);
+    const index = N.FEATURES.findIndex(x => x.id === id);
+    if (index >= 0) N.FEATURES.splice(index, 1);
     N.settings.railLayout = (N.settings.railLayout || []).filter(x => x !== id);
     N.settings.hiddenIcons = (N.settings.hiddenIcons || []).filter(x => x !== id);
     if (persist) save(N);
   }
 
   async function save(N) {
-    N.sidebarShortcuts = [...N.shortcutItems.values()].map(x => ({ id:x.id,name:x.name,toolKey:x.toolKey,icon:x.icon }));
+    N.sidebarShortcuts = [...N.shortcutItems.values()].map(x => ({
+      id:x.id,name:x.name,toolKey:x.toolKey,icon:x.icon
+    }));
     await N.storeSet({ nexusSidebarShortcuts:N.sidebarShortcuts, nexusSettings:N.settings });
     N.renderRail?.();
-  }
-
-  function installPickerButton(N) {
-    const controls = N.root.querySelector('#nexus-corner-controls');
-    if (!controls || controls.querySelector('#nexus-shortcut-picker')) return;
-    const button = document.createElement('button');
-    button.id = 'nexus-shortcut-picker';
-    button.className = 'nexus-icon nexus-util';
-    button.title = 'Add widgets & shortcuts';
-    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h6.5V12H4zM13.5 5.5H20V12h-6.5zM4 15h6.5v4H4zM13.5 15H20v4h-6.5z"/><path d="M17 3v5M14.5 5.5h5"/></svg>';
-    const hide = controls.querySelector('#nexus-session-hide');
-    controls.insertBefore(button, hide || controls.firstChild);
-    button.onclick = event => { event.stopPropagation(); toggleMenu(N, button); };
-  }
-
-  function toggleMenu(N, anchor) {
-    let menu = N.root.querySelector('#nexus-shortcut-menu');
-    if (menu && !menu.hidden) { menu.hidden = true; return; }
-    if (!menu) {
-      menu = document.createElement('section');
-      menu.id = 'nexus-shortcut-menu';
-      menu.innerHTML = '<header><div><b>Add to sidebar</b><small>Widgets & feature shortcuts</small></div><button data-close>×</button></header><input data-search placeholder="Search Nexus features…"><div class="nexus-shortcut-list"></div>';
-      N.root.append(menu);
-      menu.querySelector('[data-close]').onclick = () => { menu.hidden = true; };
-      menu.querySelector('[data-search]').oninput = () => paintMenu(N, menu);
-      menu.addEventListener('pointerdown', event => event.stopPropagation());
-    }
-    menu.hidden = false;
-    paintMenu(N, menu);
-    const rect = anchor.getBoundingClientRect();
-    menu.style.bottom = Math.max(10, innerHeight - rect.top + 8) + 'px';
-    if (N.root.classList.contains('edge-right')) { menu.style.right = '10px'; menu.style.left = 'auto'; }
-    else { menu.style.left = '10px'; menu.style.right = 'auto'; }
-    setTimeout(() => menu.querySelector('[data-search]')?.focus(), 0);
-  }
-
-  function paintMenu(N, menu) {
-    const q = menu.querySelector('[data-search]').value.trim().toLowerCase();
-    const list = menu.querySelector('.nexus-shortcut-list');
-    list.replaceChildren();
-    const items = catalog().filter(item => !q || (item.name + ' ' + item.desc + ' ' + item.key).toLowerCase().includes(q)).slice(0, 80);
-    for (const item of items) {
-      const record = recordFor(item);
-      const added = N.shortcutItems.has(record.id);
-      const row = document.createElement('button');
-      row.className = 'nexus-shortcut-row' + (added ? ' added' : '');
-      row.innerHTML = '<span class="nexus-shortcut-row-icon"></span><div><b></b><small></small></div><em></em>';
-      row.querySelector('.nexus-shortcut-row-icon').textContent = item.key === 'profile' ? 'DB' : (CATEGORY[item.key] || 'N').slice(0,2).toUpperCase();
-      row.querySelector('b').textContent = item.name;
-      row.querySelector('small').textContent = item.desc;
-      row.querySelector('em').textContent = added ? 'Added' : 'Add';
-      row.onclick = async () => {
-        if (added) unregister(N, record.id, false); else register(N, record, false);
-        await save(N); paintMenu(N, menu);
-      };
-      list.append(row);
-    }
-    if (!items.length) {
-      const empty = document.createElement('div');
-      empty.className = 'nexus-shortcut-empty';
-      empty.textContent = 'No matching Nexus feature.';
-      list.append(empty);
-    }
+    N.updateDynamicRailLayout?.();
   }
 })();

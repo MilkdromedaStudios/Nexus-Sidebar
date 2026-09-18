@@ -25,7 +25,48 @@ document.addEventListener('nexus:ready',()=>{
     const railActions=document.createElement('div');railActions.className='nexus-inline-actions';
     const edit=document.createElement('button');edit.textContent=N.editMode?'Finish reordering':'Reorder icons';edit.onclick=()=>{N.editMode=!N.editMode;N.apply();N.renderRail();N.renderSettings();};
     const reset=document.createElement('button');reset.textContent='Reset order';reset.onclick=async()=>{s.railLayout=[];await N.saveSettings();N.renderRail();N.renderSettings();};
-    railActions.append(edit,reset);icons.append(row('Icon order',railActions,'Reorder mode only lets you drag the existing icons. There is no add button.'));box.append(icons);
+    railActions.append(edit,reset);icons.append(row('Icon order',railActions,'Reorder mode only lets you drag the existing icons.'));
+
+    const shortcutSettings=document.createElement('div');shortcutSettings.className='nexus-shortcut-settings';
+    const manager=N.sidebarShortcutManager;
+    if(N.isGuest){
+      const locked=document.createElement('div');locked.className='nexus-shortcut-empty';locked.textContent='Sign in with DigitBox to add feature shortcuts to the sidebar.';shortcutSettings.append(locked);
+    }else if(manager){
+      const addRow=document.createElement('div');addRow.className='nexus-shortcut-add-row';
+      const select=document.createElement('select');
+      const placeholder=new Option('Choose a widget or feature…','');placeholder.disabled=true;placeholder.selected=true;select.add(placeholder);
+      for(const item of manager.catalog().filter(x=>!x.added)){
+        const option=new Option(item.name,item.id);
+        option.title=item.desc||'';
+        select.add(option);
+      }
+      const addShortcut=document.createElement('button');addShortcut.type='button';addShortcut.textContent='Add';addShortcut.disabled=true;
+      select.onchange=()=>{addShortcut.disabled=!select.value;};
+      addShortcut.onclick=async()=>{if(!select.value)return;if(await manager.add(select.value))N.renderSettings();};
+      addRow.append(select,addShortcut);
+      shortcutSettings.append(addRow);
+
+      const added=document.createElement('div');added.className='nexus-shortcut-added';
+      const current=manager.added();
+      if(!current.length){
+        const empty=document.createElement('div');empty.className='nexus-shortcut-empty';empty.textContent='No extra feature shortcuts added.';
+        added.append(empty);
+      }else{
+        for(const item of current){
+          const line=document.createElement('div');line.className='nexus-shortcut-added-row';
+          const name=document.createElement('span');name.textContent=item.name;
+          const remove=document.createElement('button');remove.type='button';remove.textContent='Remove';
+          remove.onclick=async()=>{if(await manager.remove(item.id))N.renderSettings();};
+          line.append(name,remove);added.append(line);
+        }
+      }
+      shortcutSettings.append(added);
+    }else{
+      const loading=document.createElement('div');loading.className='nexus-shortcut-empty';loading.textContent='Feature shortcuts are still loading.';
+      shortcutSettings.append(loading);
+    }
+    icons.append(row('Add feature shortcut',shortcutSettings,N.isGuest?'Member feature':'Choose a widget or Nexus feature to place directly on the sidebar.'));
+    box.append(icons);
 
     const updates=section('Updates');
     const auto=input('checkbox',s.autoUpdateCheck!==false);auto.onchange=()=>save('autoUpdateCheck',auto.checked);updates.append(row('Check GitHub automatically',auto,'Checks for a newer Nexus version every 6 hours'));

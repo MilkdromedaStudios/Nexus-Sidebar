@@ -1,0 +1,26 @@
+/* Dynamic rail positioning: center when possible, move upward before colliding with bottom controls. */
+#nexus-rail{
+  top:var(--nexus-dynamic-rail-top,10px)!important;
+  bottom:auto!important;
+  max-height:var(--nexus-dynamic-rail-height,calc(100vh - 150px))!important;
+  transform:translateX(-155%)!important;
+}
+#nexus-root.edge-right #nexus-rail{
+  transform:translateX(155%)!important;
+}
+#nexus-root.rail-visible #nexus-rail{
+  transform:translateX(0)!important;
+}
+#nexus-icons{
+  min-height:0!important;
+  max-height:100%!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain!important;
+}
+#nexus-rail.nexus-rail-scrolls #nexus-icons{
+  mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 8px),transparent 100%)!important;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 8px,#000 calc(100% - 8px),transparent 100%)!important;
+}
+@media(max-height:520px){
+  #nexus-icons{scrollbar-width:thin!important}
+}
