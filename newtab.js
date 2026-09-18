@@ -536,7 +536,7 @@
     };
 
     document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'Space') {
         e.preventDefault();
         $('query').focus();
         $('query').select();
@@ -548,6 +548,11 @@
     });
   }
 
-  window.addEventListener('focus', () => { if (!initialized) init(); });
+  const recheckAccount = async () => {
+    const ok = await requireDigitBox();
+    if (ok && !initialized) init();
+  };
+  window.addEventListener('focus', recheckAccount);
+  setInterval(recheckAccount, 5 * 60 * 1000);
   init();
 })();
