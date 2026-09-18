@@ -604,6 +604,8 @@
     document.body.classList.toggle('guest-mode', guestMode);
     paintAccountBanner();
     if (initialized && wasGuest !== guestMode) {
+      appearance();
+      background();
       clock();
       renderWidgets();
     }
