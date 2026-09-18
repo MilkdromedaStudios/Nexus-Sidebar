@@ -53,6 +53,7 @@
 
     N.renderSettings = async (...args) => {
       await original(...args);
+      if (N.isGuest) return;
       const behavior = [...N.body.querySelectorAll('.nexus-settings-section')]
         .find(x => x.querySelector('h3')?.textContent === 'Behavior');
       if (!behavior || behavior.querySelector('[data-v1711-context-setting]')) return;
