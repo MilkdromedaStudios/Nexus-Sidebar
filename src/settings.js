@@ -9,7 +9,7 @@ document.addEventListener('nexus:ready',()=>{
     const theme=document.createElement('select');[['modern','Modern'],['fluent','Fluent'],['glass','Glass'],['minimal','Minimal'],['neon','Neon']].forEach(([v,n])=>theme.add(new Option(n,v,v===s.theme,v===s.theme)));theme.onchange=()=>save('theme',theme.value);appearance.append(row('Theme',theme,'Glow is only used by Neon'));
     const edge=document.createElement('select');['left','right'].forEach(v=>edge.add(new Option(v,v,v===s.edge,v===s.edge)));edge.onchange=()=>save('edge',edge.value);appearance.append(row('Sidebar side',edge));
     const border=input('checkbox',s.borderless);border.onchange=()=>save('borderless',border.checked);appearance.append(row('No borders',border));
-    [['Panel width','panelWidth',340,760],['Panel gap','panelGap',6,48],['Corner radius','radius',0,20],['Icon size','iconSize',16,30],['Reveal zone','revealWidth',4,24]].forEach(([l,k,min,max])=>{const i=input('range',s[k]);i.min=min;i.max=max;i.oninput=()=>save(k,+i.value);appearance.append(row(l,i))});
+    [['Panel gap','panelGap',6,48],['Corner radius','radius',0,20],['Icon size','iconSize',16,30],['Reveal zone','revealWidth',4,24]].forEach(([l,k,min,max])=>{const i=input('range',s[k]);i.min=min;i.max=max;i.oninput=()=>save(k,+i.value);appearance.append(row(l,i))});
     const acc=input('color',s.accent);acc.oninput=()=>save('accent',acc.value);appearance.append(row('Accent',acc));box.append(appearance);
 
     const behavior=section('Behavior');

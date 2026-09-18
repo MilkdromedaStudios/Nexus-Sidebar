@@ -42,11 +42,37 @@
   let noteTimer = 0;
   let raf = 0;
   let stars = [];
+  let accountUser = null;
+  let initialized = false;
+  let initializing = false;
+
+  async function requireDigitBox() {
+    const status = await msg({ type: 'nexus:digitbox-status', force: true });
+    if (status?.signedIn && status.user) {
+      accountUser = status.user;
+      document.getElementById('newtab-account-gate')?.remove();
+      return true;
+    }
+    showAccountGate();
+    return false;
+  }
+
+  function showAccountGate() {
+    let gate = document.getElementById('newtab-account-gate');
+    if (gate) return;
+    gate = document.createElement('div');
+    gate.id = 'newtab-account-gate';
+    gate.innerHTML = '<div class="newtab-account-card"><div class="newtab-account-mark">N</div><small>NEXUS SIDEBAR</small><h2>Sign in with DigitBox</h2><p>Your DigitBox account is required to use the Nexus workspace.</p><button data-login>Continue to DigitBox</button><button class="secondary" data-check>I\'ve signed in · Check again</button></div>';
+    document.body.append(gate);
+    gate.querySelector('[data-login]').onclick = () => msg({ type: 'nexus:digitbox-open-login' });
+    gate.querySelector('[data-check]').onclick = () => init();
+  }
 
   function hello() {
     const h = new Date().getHours();
     const p = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-    return shared.profileName ? `${p}, ${shared.profileName}` : p;
+    const name = accountUser?.displayName || shared.profileName;
+    return name ? `${p}, ${name}` : p;
   }
 
   function clock() {
@@ -449,6 +475,11 @@
   }
 
   async function init() {
+    if (initialized || initializing) return;
+    initializing = true;
+    if (!await requireDigitBox()) { initializing = false; return; }
+    initialized = true;
+    initializing = false;
     const v = await get({ nexusNewtab: D, nexusSettings: {}, nexusFocus: null, nexusTasks: [], nexusNotes: '' });
     c = { ...D, ...v.nexusNewtab, widgets: { ...D.widgets, ...v.nexusNewtab?.widgets } };
     if (c.bgType === 'site') c.bgType = 'gradient';
@@ -505,7 +536,7 @@
     };
 
     document.addEventListener('keydown', e => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === 'Space') {
         e.preventDefault();
         $('query').focus();
         $('query').select();
@@ -517,5 +548,11 @@
     });
   }
 
+  const recheckAccount = async () => {
+    const ok = await requireDigitBox();
+    if (ok && !initialized) init();
+  };
+  window.addEventListener('focus', recheckAccount);
+  setInterval(recheckAccount, 5 * 60 * 1000);
   init();
 })();

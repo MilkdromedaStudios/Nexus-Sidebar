@@ -29,18 +29,85 @@ async function setupMenus() {
 }
 
 async function dictionary(word) {
-  const clean = String(word || '').trim().split(/\s+/)[0].replace(/[^A-Za-z'-]/g,'').slice(0,60);
-  if (!clean) return { ok:false, error:'Select a single word.' };
-  try {
+  const selected = String(word || '').trim().replace(/\s+/g, ' ').replace(/^[\s“”\"'.,;:!?()[\]{}]+|[\s“”\"'.,;:!?()[\]{}]+$/g, '').slice(0, 180);
+  if (!selected) return { ok:false, error:'Select a word or phrase first.' };
+  const wordCount = selected.split(/\s+/).filter(Boolean).length;
+
+  const dictionaryApi = async term => {
+    const clean = term.replace(/[^A-Za-z'-]/g, '').slice(0, 60);
+    if (!clean) return null;
     const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(clean), { cache:'no-store' });
-    if (!r.ok) throw new Error('No definition found');
+    if (!r.ok) return null;
     const data = await r.json();
     const entry = data?.[0];
-    const meanings = (entry?.meanings || []).flatMap(m => (m.definitions || []).slice(0,2).map(d => ({
+    const meanings = (entry?.meanings || []).flatMap(m => (m.definitions || []).slice(0, 3).map(d => ({
       partOfSpeech:m.partOfSpeech || '', definition:d.definition || '', example:d.example || ''
-    }))).slice(0,6);
-    return { ok:true, word:entry?.word || clean, phonetic:entry?.phonetic || entry?.phonetics?.find(x=>x.text)?.text || '', meanings };
-  } catch (e) { return { ok:false, word:clean, error:e.message || 'Definition unavailable' }; }
+    }))).filter(x => x.definition).slice(0, 8);
+    if (!meanings.length) return null;
+    return { ok:true, word:entry?.word || clean, phonetic:entry?.phonetic || entry?.phonetics?.find(x=>x.text)?.text || '', meanings, source:'DictionaryAPI' };
+  };
+
+  const plain = value => String(value || '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const wiktionaryStructured = async term => {
+    const r = await fetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(term), { cache:'no-store' });
+    if (!r.ok) return null;
+    const body = await r.json();
+    const groups = Array.isArray(body) ? body : Object.values(body || {}).flat();
+    const meanings = [];
+    for (const entry of groups) {
+      const part = entry?.partOfSpeech || entry?.part_of_speech || entry?.language || 'Wiktionary';
+      const defs = Array.isArray(entry?.definitions) ? entry.definitions : [];
+      for (const def of defs) {
+        const definition = plain(typeof def === 'string' ? def : def?.definition);
+        if (!definition) continue;
+        const examples = Array.isArray(def?.examples) ? def.examples : [];
+        const example = plain(typeof examples[0] === 'string' ? examples[0] : examples[0]?.example);
+        meanings.push({ partOfSpeech:part, definition, example });
+        if (meanings.length >= 8) break;
+      }
+      if (meanings.length >= 8) break;
+    }
+    return meanings.length ? { ok:true, word:term, phonetic:'', meanings, source:'Wiktionary' } : null;
+  };
+
+  const wiktionaryExtract = async term => {
+    const url = 'https://en.wiktionary.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=extracts&exintro=1&explaintext=1&titles=' + encodeURIComponent(term);
+    const r = await fetch(url, { cache:'no-store' });
+    if (!r.ok) return null;
+    const body = await r.json();
+    const page = Object.values(body?.query?.pages || {})[0];
+    const extract = plain(page?.extract || '');
+    if (!extract || page?.missing !== undefined) return null;
+    const sentence = extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ').slice(0, 900);
+    return sentence ? { ok:true, word:term, phonetic:'', meanings:[{ partOfSpeech:'Wiktionary', definition:sentence, example:'' }], source:'Wiktionary' } : null;
+  };
+
+  try {
+    if (wordCount === 1) {
+      const fast = await dictionaryApi(selected);
+      if (fast) return fast;
+    }
+    const structured = await wiktionaryStructured(selected).catch(() => null);
+    if (structured) return structured;
+    if (wordCount > 1) {
+      const extract = await wiktionaryExtract(selected).catch(() => null);
+      if (extract) return extract;
+    } else {
+      const fallback = await dictionaryApi(selected).catch(() => null);
+      if (fallback) return fallback;
+    }
+    return { ok:false, word:selected, error:'No dictionary entry was found for this selection.' };
+  } catch (e) {
+    return { ok:false, word:selected, error:e.message || 'Definition unavailable' };
+  }
 }
 
 async function addNote(text, sourceUrl='', title='') {

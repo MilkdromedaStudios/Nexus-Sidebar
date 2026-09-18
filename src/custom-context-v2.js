@@ -100,14 +100,14 @@
     });
 
     document.addEventListener('contextmenu', e => {
-      if (N.root?.contains(e.target) || N.settings.customContextMenu === false) return;
+      if (N.accountLocked || N.root?.contains(e.target) || N.settings.customContextMenu === false) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       showMenu(e.clientX, e.clientY, selection());
     }, true);
 
     document.addEventListener('mouseup', e => {
-      if (e.button !== 0 || N.root?.contains(e.target)) return;
+      if (N.accountLocked || e.button !== 0 || N.root?.contains(e.target)) return;
       setTimeout(() => {
         if (N.settings.selectionActions === false) return;
         const text = selection();
@@ -120,6 +120,8 @@
         let rect;
         try { rect = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : null; } catch {}
         if (!rect) return;
+        currentX = Math.max(8, Math.min(innerWidth - 8, rect.left + rect.width / 2));
+        currentY = Math.max(8, Math.min(innerHeight - 8, rect.bottom + 8));
         bubble.hidden = false;
         bubble.style.left = Math.max(6, Math.min(innerWidth - 340, rect.left + rect.width / 2 - 150)) + 'px';
         bubble.style.top = Math.max(6, rect.top - 42) + 'px';

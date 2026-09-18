@@ -50,6 +50,7 @@
       subtree: true
     });
     window.addEventListener('resize', queueSync, { passive: true });
+    document.addEventListener('nexus:panel-resized', queueSync);
     queueSync();
 
     function createLens(kind) {
@@ -68,7 +69,7 @@
       const select = [...appearance.querySelectorAll('select')][0];
       if (!select) return;
       if (![...select.options].some(o => o.value === 'liquid-glass')) {
-        select.add(new Option('Liquid Glass · LiquidGL', 'liquid-glass'));
+        select.add(new Option('Liquid Glass', 'liquid-glass'));
       }
       select.value = N.settings.theme;
     }
@@ -92,7 +93,7 @@
           if (!row) {
             row = document.createElement('button');
             row.className = 'nxv2-command-result strong';
-            row.innerHTML = '<span>THEME</span><div><b>Use Liquid Glass</b><small>LiquidGL · WebGPU / WebGL refraction</small></div>';
+            row.innerHTML = '<span>THEME</span><div><b>Use Liquid Glass</b><small>WebGPU / WebGL refraction</small></div>';
             row.onclick = async () => {
               N.settings.theme = 'liquid-glass';
               await N.saveSettings();
