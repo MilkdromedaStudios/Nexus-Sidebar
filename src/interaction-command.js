@@ -31,11 +31,19 @@
 
   document.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
+    const N = window.NexusSidebar;
     if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      if (N?.isGuest) return;
       e.stopImmediatePropagation();
       return;
     }
     if (ctrl && !e.shiftKey && e.code === 'Space') {
+      if (N?.isGuest) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        N.showMemberPrompt?.('Universal Command', 'Guest mode does not include the command palette. Sign in with DigitBox to unlock it.');
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       if (window.NexusCommandV2) window.NexusCommandV2.open();
