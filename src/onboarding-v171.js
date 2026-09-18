@@ -32,7 +32,7 @@
           <section hidden>
             <span class="nxv2-tutorial-icon">◐</span><h2>Choose your look</h2>
             <p>Pick a theme and which edge Nexus lives on. You can change this later in Settings or with commands like <code>theme glass</code> and <code>sidebar right</code>.</p>
-            <div class="nxv2-theme-grid">${['modern','fluent','glass','minimal','neon'].map(x=>`<button data-theme="${x}">${x}</button>`).join('')}</div>
+            <div class="nxv2-theme-grid">${[['modern','Modern'],['fluent','Fluent'],['glass','Glass'],['minimal','Minimal'],['neon','Neon'],['liquid-glass','Liquid Glass']].map(([x,label])=>`<button data-theme="${x}">${label}</button>`).join('')}</div>
             <div class="nxv2-side-grid"><button data-side="left">Sidebar left</button><button data-side="right">Sidebar right</button></div>
           </section>
           <section hidden>
