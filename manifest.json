@@ -1,24 +1,123 @@
 {
   "manifest_version": 3,
   "name": "Nexus Sidebar: All your needs in one place",
-  "version": "17.2.0",
-  "description": "Browser productivity workspace with universal commands, smart selection actions, focus, tabs, notes, tools and Liquid Glass theming.",
+  "version": "17.3.0",
+  "description": "Browser productivity workspace with DigitBox accounts, universal commands, smart selection tools, resizable panels, sidebar widgets and Liquid Glass.",
   "author": "Numberstring Productions",
-  "permissions": ["storage","history","tabs","scripting","favicon","declarativeNetRequestWithHostAccess","alarms","contentSettings","notifications","contextMenus","bookmarks","downloads","downloads.open","sessions","topSites","tabGroups","clipboardRead","clipboardWrite"],
-  "host_permissions": ["<all_urls>"],
-  "background": {"service_worker":"background.js"},
-  "action": {"default_title":"Show Nexus Sidebar","default_icon":{"16":"icons/icon.png","32":"icons/icon.png"}},
-  "icons": {"16":"icons/icon.png","32":"icons/icon.png","48":"icons/icon.png","128":"icons/icon.png"},
+  "permissions": [
+    "storage",
+    "history",
+    "tabs",
+    "scripting",
+    "favicon",
+    "declarativeNetRequestWithHostAccess",
+    "alarms",
+    "contentSettings",
+    "notifications",
+    "contextMenus",
+    "bookmarks",
+    "downloads",
+    "downloads.open",
+    "sessions",
+    "topSites",
+    "tabGroups",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Show Nexus Sidebar",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "32": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon.png",
+    "32": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
   "commands": {
     "open-nexus-command": {
-      "suggested_key": {"default":"Ctrl+Space"},
+      "suggested_key": {
+        "default": "Ctrl+Space"
+      },
       "description": "Open the Nexus universal command palette"
     }
   },
-  "web_accessible_resources": [{"resources":["_favicon/*"],"matches":["<all_urls>"]}],
-  "content_scripts": [
-    {"matches":["<all_urls>"],"css":["styles/base.css","styles/themes.css","styles/refine.css","styles/controls-autohide.css","styles/nexus-suite.css","styles/interaction-v2.css","styles/v1711-fixes.css","styles/liquid-glass-theme.css"],"js":["src/core.js","src/sites.js","src/apps.js","src/games.js","src/settings.js","src/update-ui.js","src/controls-autohide.js","src/interaction-command.js","src/shortcut-compat-v171.js","src/nexus-suite.js","src/nexus-suite-enhancements.js","src/custom-context-v2.js","src/onboarding-v171.js","src/v1711-fixes.js","vendor/liquidgl/liquidGL.js","src/liquid-glass-theme.js","src/focus-timer-options.js"],"run_at":"document_start","all_frames":false,"match_about_blank":true},
-    {"matches":["http://*/*","https://*/*"],"js":["frame-session-bridge.js"],"run_at":"document_start","all_frames":true}
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "_favicon/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
-  "chrome_url_overrides": {"newtab":"newtab.html"}
-}
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "styles/base.css",
+        "styles/themes.css",
+        "styles/refine.css",
+        "styles/controls-autohide.css",
+        "styles/nexus-suite.css",
+        "styles/interaction-v2.css",
+        "styles/v1711-fixes.css",
+        "styles/liquid-glass-theme.css",
+        "styles/panel-resize.css",
+        "styles/account-widget.css",
+        "styles/sidebar-shortcuts.css"
+      ],
+      "js": [
+        "src/core.js",
+        "src/sites.js",
+        "src/apps.js",
+        "src/games.js",
+        "src/settings.js",
+        "src/update-ui.js",
+        "src/controls-autohide.js",
+        "src/interaction-command.js",
+        "src/shortcut-compat-v171.js",
+        "src/nexus-suite.js",
+        "src/nexus-suite-enhancements.js",
+        "src/custom-context-v2.js",
+        "src/onboarding-v171.js",
+        "src/v1711-fixes.js",
+        "vendor/liquidgl/liquidGL.js",
+        "src/liquid-glass-theme.js",
+        "src/focus-timer-options.js",
+        "src/panel-resize.js",
+        "src/digitbox-account.js",
+        "src/sidebar-shortcuts.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false,
+      "match_about_blank": true
+    },
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "frame-session-bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  }
+}\n
