@@ -139,7 +139,7 @@
       N.apply = () => {
         const s = N.settings, wasVisible = root.classList.contains('rail-visible');
         const activeTheme = N.isGuest ? 'modern' : s.theme;
-        root.className = `${s.dark ? 'dark' : ''} theme-${activeTheme} edge-${s.edge} ${s.railStyle === 'floating' ? 'floating' : ''} ${s.borderless ? 'borderless' : ''} ${N.editMode ? 'edit-mode' : ''} ${N.isGuest ? 'account-guest' : 'account-member'}`;
+        root.className = `${s.dark ? 'dark' : ''} theme-${activeTheme} edge-${s.edge} ${s.railStyle === 'floating' ? 'floating' : ''} ${s.borderless ? 'borderless' : ''} ${N.editMode ? 'edit-mode' : ''} ${s.edgeRevealOnly ? 'nexus-edge-only' : ''} ${N.isGuest ? 'account-guest' : 'account-member'}`;
         if (wasVisible) root.classList.add('rail-visible');
         if (sessionStorage.getItem('nexus-session-hidden') === '1') root.classList.add('session-hidden');
         root.style.setProperty('--nexus-icon', s.iconSize + 'px'); root.style.setProperty('--nexus-gap', s.iconGap + 'px'); root.style.setProperty('--nexus-width', s.panelWidth + 'px'); root.style.setProperty('--nexus-panel-gap', s.panelGap + 'px'); root.style.setProperty('--nexus-radius', s.radius + 'px'); root.style.setProperty('--nexus-reveal', s.revealWidth + 'px'); root.style.setProperty('--nexus-accent', s.accent); style.textContent = N.isGuest ? '' : (s.customCSS || '');
