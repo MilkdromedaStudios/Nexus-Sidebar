@@ -49,7 +49,7 @@
       childList: true,
       subtree: true
     });
-    window.addEventListener('resize', queueSync, { passive: true });
+    window.addEventListener('resize', queueSync, { passive: true });\n    document.addEventListener('nexus:panel-resized', queueSync);
     queueSync();
 
     function createLens(kind) {
