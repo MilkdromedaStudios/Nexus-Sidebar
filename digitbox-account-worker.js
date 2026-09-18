@@ -184,7 +184,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId).catch(() => null);
-  if (isDigitBoxUrl(tab?.url)) importFromDigitBoxTab(tabId).catch(() => {});
+  if (isDigitBoxUrl(tab?.url)) refreshFromDigitBoxTab(tabId).catch(() => {});
 });
 
 chrome.runtime.onStartup.addListener(() => status(true).catch(() => {}));
