@@ -62,7 +62,8 @@ async function frameRule(tabId, on, rawUrl = '') {
         type: 'modifyHeaders',
         responseHeaders: [
           { header: 'x-frame-options', operation: 'remove' },
-          { header: 'content-security-policy', operation: 'remove' }
+          { header: 'content-security-policy', operation: 'remove' },
+          { header: 'permissions-policy', operation: 'remove' }
         ]
       },
       condition: {
