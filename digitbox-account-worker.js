@@ -7,7 +7,7 @@ const DIGITBOX = {
   profile: 'https://digitbox.dev/profile',
   storageKey: 'nexusDigitBoxAuth',
   websiteStorageKey: 'digitbox-deepforge-auth-v1',
-  maxAge: 5 * 60 * 1000,
+  maxAge: 30 * 1000,
 };
 
 const dbGet = defaults => new Promise(resolve => chrome.storage.local.get(defaults, value => resolve(value || defaults)));
@@ -148,7 +148,7 @@ async function broadcast(auth) {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message?.type?.startsWith('nexus:digitbox-')) return;
+  if (!message?.type?.startsWith('nexus:digitbox-') || message.type === 'nexus:digitbox-auth-changed') return;
   (async () => {
     if (message.type === 'nexus:digitbox-status') return status(!!message.force);
     if (message.type === 'nexus:digitbox-import') {
@@ -170,11 +170,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true;
 });
 
+async function refreshFromDigitBoxTab(tabId) {
+  const auth = await importFromDigitBoxTab(tabId);
+  if (!auth) await status(true);
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!isDigitBoxUrl(changeInfo.url || tab?.url)) return;
   if (changeInfo.url || changeInfo.status === 'complete') {
-    importFromDigitBoxTab(tabId).catch(() => {});
-    setTimeout(() => importFromDigitBoxTab(tabId).catch(() => {}), 900);
+    refreshFromDigitBoxTab(tabId).catch(() => {});
+    setTimeout(() => refreshFromDigitBoxTab(tabId).catch(() => {}), 900);
   }
 });
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
