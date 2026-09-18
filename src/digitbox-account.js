@@ -17,6 +17,7 @@
     N.__digitBoxAccountInstalled = true;
     N.accountLocked = true;
     installProfileButton(N);
+    N.openDigitBoxProfile = () => N.accountLocked ? showGate(N) : openProfilePanel(N);
     wrapNexusActions(N);
     importWebsiteSession(N);
     refresh(N, true);
@@ -148,6 +149,7 @@
     const user = N.digitboxUser;
     if (!user) return showGate(N);
     N.runCleanup?.();
+    N.applyPanelWidth?.('digitbox-profile');
     N.active = { id: 'digitbox-profile', name: 'Profile', icon: 'home', type: 'local' };
     N.setHeader?.(N.active);
     N.root.querySelector('#nexus-title').textContent = user.displayName || 'DigitBox Profile';
