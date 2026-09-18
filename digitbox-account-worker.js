@@ -7,7 +7,7 @@ const DIGITBOX = {
   profile: 'https://digitbox.dev/profile',
   storageKey: 'nexusDigitBoxAuth',
   websiteStorageKey: 'digitbox-deepforge-auth-v1',
-  maxAge: 5 * 60 * 1000,
+  maxAge: 30 * 1000,
 };
 
 const dbGet = defaults => new Promise(resolve => chrome.storage.local.get(defaults, value => resolve(value || defaults)));
@@ -45,32 +45,44 @@ async function validateToken(token, expiresAt = 0) {
   }
 }
 
+function isDigitBoxUrl(raw) {
+  try {
+    const host = new URL(raw || '').hostname.toLowerCase();
+    return host === 'digitbox.dev' || host === 'www.digitbox.dev' || host === 'digitbox.pages.dev' || host.endsWith('.digitbox.pages.dev');
+  } catch {
+    return false;
+  }
+}
+
+async function importFromDigitBoxTab(tabId) {
+  if (!tabId) return null;
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (!isDigitBoxUrl(tab?.url)) return null;
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'MAIN',
+      func: key => {
+        try { return localStorage.getItem(key) || ''; } catch { return ''; }
+      },
+      args: [DIGITBOX.websiteStorageKey],
+    });
+    const raw = result?.result;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.token) return null;
+    return validateToken(parsed.token, parsed.expiresAt);
+  } catch {
+    return null;
+  }
+}
+
 async function importFromDigitBoxTabs() {
   const tabs = await chrome.tabs.query({});
-  const candidates = tabs.filter(tab => {
-    try {
-      const host = new URL(tab.url || '').hostname.toLowerCase();
-      return host === 'digitbox.dev' || host === 'www.digitbox.dev' || host === 'digitbox.pages.dev' || host.endsWith('.digitbox.pages.dev');
-    } catch { return false; }
-  });
-  for (const tab of candidates) {
-    if (!tab.id) continue;
-    try {
-      const [result] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        world: 'MAIN',
-        func: key => {
-          try { return localStorage.getItem(key) || ''; } catch { return ''; }
-        },
-        args: [DIGITBOX.websiteStorageKey],
-      });
-      const raw = result?.result;
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.token) continue;
-      const auth = await validateToken(parsed.token, parsed.expiresAt);
-      if (auth) return auth;
-    } catch {}
+  for (const tab of tabs) {
+    if (!tab.id || !isDigitBoxUrl(tab.url)) continue;
+    const auth = await importFromDigitBoxTab(tab.id);
+    if (auth) return auth;
   }
   return null;
 }
@@ -122,19 +134,21 @@ async function deleteAvatar() {
 }
 
 async function broadcast(auth) {
+  const message = {
+    type: 'nexus:digitbox-auth-changed',
+    signedIn: !!auth,
+    user: auth?.user || null,
+  };
   const tabs = await chrome.tabs.query({}).catch(() => []);
   for (const tab of tabs) {
     if (!tab.id || !/^(https?|file):/i.test(tab.url || '')) continue;
-    chrome.tabs.sendMessage(tab.id, {
-      type: 'nexus:digitbox-auth-changed',
-      signedIn: !!auth,
-      user: auth?.user || null,
-    }, () => void chrome.runtime.lastError);
+    chrome.tabs.sendMessage(tab.id, message, () => void chrome.runtime.lastError);
   }
+  try { chrome.runtime.sendMessage(message, () => void chrome.runtime.lastError); } catch {}
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message?.type?.startsWith('nexus:digitbox-')) return;
+  if (!message?.type?.startsWith('nexus:digitbox-') || message.type === 'nexus:digitbox-auth-changed') return;
   (async () => {
     if (message.type === 'nexus:digitbox-status') return status(!!message.force);
     if (message.type === 'nexus:digitbox-import') {
@@ -154,6 +168,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return { ok: false, error: 'Unknown DigitBox account action.' };
   })().then(sendResponse).catch(error => sendResponse({ ok: false, error: error?.message || String(error) }));
   return true;
+});
+
+async function refreshFromDigitBoxTab(tabId) {
+  const auth = await importFromDigitBoxTab(tabId);
+  if (!auth) await status(true);
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (!isDigitBoxUrl(changeInfo.url || tab?.url)) return;
+  if (changeInfo.url || changeInfo.status === 'complete') {
+    refreshFromDigitBoxTab(tabId).catch(() => {});
+    setTimeout(() => refreshFromDigitBoxTab(tabId).catch(() => {}), 900);
+  }
+});
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (isDigitBoxUrl(tab?.url)) refreshFromDigitBoxTab(tabId).catch(() => {});
 });
 
 chrome.runtime.onStartup.addListener(() => status(true).catch(() => {}));

@@ -63,6 +63,7 @@
     }
 
     function addThemeOption() {
+      if (N.isGuest) return;
       const appearance = [...N.body.querySelectorAll('.nexus-settings-section')]
         .find(node => node.querySelector('h3')?.textContent === 'Appearance');
       if (!appearance) return;

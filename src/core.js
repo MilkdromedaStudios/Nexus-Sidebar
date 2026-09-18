@@ -13,12 +13,13 @@
   const FEATURES = [
     { id: 'launchpad', name: 'Launchpad', icon: 'home', type: 'local' },
     { id: 'history', name: 'History', icon: 'history', type: 'local' },
+    { id: 'bookmarks', name: 'Bookmarks', icon: 'bookmark', type: 'local' },
     { id: 'chatgpt', name: 'ChatGPT', icon: 'sparkle', type: 'web', url: 'https://chatgpt.com/' },
     { id: 'pomodoro', name: 'Focus Timer', icon: 'timer', type: 'local' },
     { id: 'games', name: 'F1 Racing', icon: 'flag', type: 'local' }
   ];
 
-  const DEFAULT_LAYOUT = ['launchpad', 'history', 'chatgpt', 'pomodoro', 'games'];
+  const DEFAULT_LAYOUT = ['launchpad', 'history', 'bookmarks', 'chatgpt', 'pomodoro', 'games'];
   const quotes = [
     'Small steps still move you forward.',
     'Useful beats complicated.',
@@ -31,6 +32,7 @@
   const ICONS = {
     home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.7 12 3.8l8.5 6.9v8.5a1.8 1.8 0 0 1-1.8 1.8H5.3a1.8 1.8 0 0 1-1.8-1.8z"/><path d="M9 21v-6.5h6V21"/></svg>',
     history: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.7 7.7V3.8m0 0h3.9M4 4.1A9 9 0 1 1 3.2 15"/><path d="M12 7.2V12l3.2 2"/></svg>',
+    bookmark: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 3.5h11.6v17l-5.8-3.8-5.8 3.8z"/></svg>',
     timer: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2.8h6M12 6a7.5 7.5 0 1 1-7.5 7.5A7.5 7.5 0 0 1 12 6Z"/><path d="M12 9.2v4.5l3 1.8M17.3 5.7l1.5-1.5"/></svg>',
     flag: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4m0 1h10.7l-1.5 3 1.5 3H5"/></svg>',
     sparkle: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5c.8 4.5 3 6.7 7.5 7.5-4.5.8-6.7 3-7.5 7.5-.8-4.5-3-6.7-7.5-7.5 4.5-.8 6.7-3 7.5-7.5Z"/></svg>',
@@ -71,7 +73,15 @@
       if (!force && !allowedByRules(settings)) return;
       const sites = got.nexusSites || [];
       normalizeLayout(settings, sites);
-      const N = window.NexusSidebar = { settings, sites, games: got.nexusGames || {}, FEATURES, storeGet, storeSet, msg, quotes, active: null, sessions: new Map(), cleanup: [], editMode: false };
+      const N = window.NexusSidebar = { settings, sites, games: got.nexusGames || {}, FEATURES, storeGet, storeSet, msg, quotes, active: null, sessions: new Map(), cleanup: [], editMode: false, isGuest: true, accountTier: 'guest', digitboxUser: null };
+      N.guestCustomSiteId = () => N.sites?.[0]?.id || '';
+      N.canUseItem = (item, custom = false) => {
+        if (!N.isGuest) return true;
+        if (!item) return false;
+        if (item.type === 'account-local' || ['launchpad', 'history', 'bookmarks', 'settings', 'digitbox-account', 'digitbox-profile'].includes(item.id)) return true;
+        const isCustom = custom || String(item.id || '').startsWith('site-');
+        return isCustom && item.id === N.guestCustomSiteId();
+      };
 
       const root = document.createElement('div');
       root.id = 'nexus-root';
@@ -128,10 +138,11 @@
       N.saveSettings = async () => storeSet({ nexusSettings: N.settings });
       N.apply = () => {
         const s = N.settings, wasVisible = root.classList.contains('rail-visible');
-        root.className = `${s.dark ? 'dark' : ''} theme-${s.theme} edge-${s.edge} ${s.railStyle === 'floating' ? 'floating' : ''} ${s.borderless ? 'borderless' : ''} ${N.editMode ? 'edit-mode' : ''}`;
+        const activeTheme = N.isGuest ? 'modern' : s.theme;
+        root.className = `${s.dark ? 'dark' : ''} theme-${activeTheme} edge-${s.edge} ${s.railStyle === 'floating' ? 'floating' : ''} ${s.borderless ? 'borderless' : ''} ${N.editMode ? 'edit-mode' : ''} ${s.edgeRevealOnly ? 'nexus-edge-only' : ''} ${N.isGuest ? 'account-guest' : 'account-member'}`;
         if (wasVisible) root.classList.add('rail-visible');
         if (sessionStorage.getItem('nexus-session-hidden') === '1') root.classList.add('session-hidden');
-        root.style.setProperty('--nexus-icon', s.iconSize + 'px'); root.style.setProperty('--nexus-gap', s.iconGap + 'px'); root.style.setProperty('--nexus-width', s.panelWidth + 'px'); root.style.setProperty('--nexus-panel-gap', s.panelGap + 'px'); root.style.setProperty('--nexus-radius', s.radius + 'px'); root.style.setProperty('--nexus-reveal', s.revealWidth + 'px'); root.style.setProperty('--nexus-accent', s.accent); style.textContent = s.customCSS || '';
+        root.style.setProperty('--nexus-icon', s.iconSize + 'px'); root.style.setProperty('--nexus-gap', s.iconGap + 'px'); root.style.setProperty('--nexus-width', s.panelWidth + 'px'); root.style.setProperty('--nexus-panel-gap', s.panelGap + 'px'); root.style.setProperty('--nexus-radius', s.radius + 'px'); root.style.setProperty('--nexus-reveal', s.revealWidth + 'px'); root.style.setProperty('--nexus-accent', s.accent); style.textContent = N.isGuest ? '' : (s.customCSS || '');
         if (!s.autoHide) root.classList.add('rail-visible'); else N.scheduleAutoHide();
       };
       N.normalizeLayout = () => normalizeLayout(N.settings, N.sites);

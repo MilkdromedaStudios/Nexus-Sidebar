@@ -31,11 +31,19 @@
 
   document.addEventListener('keydown', e => {
     const ctrl = e.ctrlKey || e.metaKey;
+    const N = window.NexusSidebar;
     if (ctrl && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      if (N?.isGuest) return;
       e.stopImmediatePropagation();
       return;
     }
     if (ctrl && !e.shiftKey && e.code === 'Space') {
+      if (N?.isGuest) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        N.showMemberPrompt?.('Universal Command', 'Guest mode does not include the command palette. Sign in with DigitBox to unlock it.');
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       if (window.NexusCommandV2) window.NexusCommandV2.open();
@@ -93,12 +101,13 @@
     const input=ov.querySelector('input'),results=ov.querySelector('.nxv2-command-results');let items=[],active=0,paintToken=0;
 
     const close=()=>{ov.hidden=true;results.replaceChildren();items=[];active=0;};
-    const open=(query='')=>{if(N.active?.id==='games')N.runCleanup?.();ov.hidden=false;N.show?.();input.value=query;paint(query);setTimeout(()=>input.focus(),0);};
+    const open=(query='')=>{if(N.isGuest){N.showMemberPrompt?.('Universal Command','Guest mode does not include the command palette. Sign in with DigitBox to unlock it.');return;}if(N.active?.id==='games')N.runCleanup?.();ov.hidden=false;N.show?.();input.value=query;paint(query);setTimeout(()=>input.focus(),0);};
     const add=(kind,title,sub,run,strong=false)=>items.push({kind,title,sub,run,strong});
     const select=i=>{active=Math.max(0,Math.min(items.length-1,i));[...results.querySelectorAll('.nxv2-command-result')].forEach((el,n)=>el.classList.toggle('active',n===active));results.querySelector('.active')?.scrollIntoView({block:'nearest'});};
     const categoryName=k=>CATEGORY_LABEL[k]||(k==='assistant'?'Nexus AI':'Nexus');
 
     async function openCategory(key){
+      if(N.isGuest){N.showMemberPrompt?.('Advanced tools','Guest mode includes Launchpad, History, Bookmarks, and one custom site. Sign in to unlock Nexus tools.');return;}
       close();
       if(key==='assistant'||key==='core')return assistant();
       if(!hub)return;
@@ -142,6 +151,7 @@
     ov.addEventListener('pointerdown',e=>{if(e.target===ov)close();});
 
     async function assistant(prefill=''){
+      if(N.isGuest){N.showMemberPrompt?.('Nexus AI','Nexus AI and the Universal Command are available after DigitBox sign-in.');return;}
       N.runCleanup?.();N.active={id:'nexus-hub',name:'Nexus AI',icon:'sparkle',type:'local'};N.setHeader?.(N.active);const sub=N.root.querySelector('#nexus-subtitle');if(sub)sub.textContent='Browser assistant · commands + ChatGPT handoff';N.panel.classList.add('open');N.root.classList.add('rail-visible');N.showLocal?.();N.body.replaceChildren();
       const wrap=document.createElement('div');wrap.className='nxv2-assistant';wrap.innerHTML='<div class="nxv2-ai-hero"><span class="nxv2-ai-orb">✦</span><div><h2>Nexus AI</h2><p>Tell me what you want to do. I can control Nexus, search, open sites, calculate, change the UI, or hand an open-ended question to ChatGPT.</p></div></div><div class="nxv2-ai-thread"><div class="nxv2-ai-msg assistant"><b>Nexus</b><p>Try “open github.com”, “24*17”, “theme glass”, “sidebar right”, “start 45 minute focus”, “open notes”, or ask me a question.</p></div></div><div class="nxv2-ai-compose"><textarea rows="2" placeholder="Ask Nexus or enter a browser command…"></textarea><button>Send</button></div><div class="nxv2-ai-quick"><button data-q="theme glass">Glass theme</button><button data-q="sidebar right">Move right</button><button data-q="focus 25">Focus 25</button><button data-q="tabs">Tabs</button><button data-q="notes">Notes</button></div>';N.body.append(wrap);
       const area=wrap.querySelector('textarea'),thread=wrap.querySelector('.nxv2-ai-thread');

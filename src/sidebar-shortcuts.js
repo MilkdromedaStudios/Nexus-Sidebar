@@ -22,8 +22,8 @@
     const previousActivate = N.activate?.bind(N);
     if (previousActivate) {
       N.activate = async (item, custom=false) => {
-        if (N.accountLocked) return N.show?.();
         if (item?.type === 'nexus-shortcut') {
+          if (N.isGuest) return N.showMemberPrompt?.('Sidebar shortcuts','Custom feature shortcuts are available after DigitBox sign-in.');
           if (item.toolKey === 'profile') return N.openDigitBoxProfile?.();
           return window.NexusSuite?.openTool?.(item.toolKey || 'core');
         }
