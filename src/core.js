@@ -78,7 +78,7 @@
       N.canUseItem = (item, custom = false) => {
         if (!N.isGuest) return true;
         if (!item) return false;
-        if (['launchpad', 'history', 'bookmarks', 'settings'].includes(item.id)) return true;
+        if (item.type === 'account-local' || ['launchpad', 'history', 'bookmarks', 'settings', 'digitbox-account', 'digitbox-profile'].includes(item.id)) return true;
         const isCustom = custom || String(item.id || '').startsWith('site-');
         return isCustom && item.id === N.guestCustomSiteId();
       };
@@ -142,7 +142,7 @@
         root.className = `${s.dark ? 'dark' : ''} theme-${activeTheme} edge-${s.edge} ${s.railStyle === 'floating' ? 'floating' : ''} ${s.borderless ? 'borderless' : ''} ${N.editMode ? 'edit-mode' : ''} ${N.isGuest ? 'account-guest' : 'account-member'}`;
         if (wasVisible) root.classList.add('rail-visible');
         if (sessionStorage.getItem('nexus-session-hidden') === '1') root.classList.add('session-hidden');
-        root.style.setProperty('--nexus-icon', s.iconSize + 'px'); root.style.setProperty('--nexus-gap', s.iconGap + 'px'); root.style.setProperty('--nexus-width', s.panelWidth + 'px'); root.style.setProperty('--nexus-panel-gap', s.panelGap + 'px'); root.style.setProperty('--nexus-radius', s.radius + 'px'); root.style.setProperty('--nexus-reveal', s.revealWidth + 'px'); root.style.setProperty('--nexus-accent', s.accent); style.textContent = s.customCSS || '';
+        root.style.setProperty('--nexus-icon', s.iconSize + 'px'); root.style.setProperty('--nexus-gap', s.iconGap + 'px'); root.style.setProperty('--nexus-width', s.panelWidth + 'px'); root.style.setProperty('--nexus-panel-gap', s.panelGap + 'px'); root.style.setProperty('--nexus-radius', s.radius + 'px'); root.style.setProperty('--nexus-reveal', s.revealWidth + 'px'); root.style.setProperty('--nexus-accent', s.accent); style.textContent = N.isGuest ? '' : (s.customCSS || '');
         if (!s.autoHide) root.classList.add('rail-visible'); else N.scheduleAutoHide();
       };
       N.normalizeLayout = () => normalizeLayout(N.settings, N.sites);
