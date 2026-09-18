@@ -1,6 +1,6 @@
 document.addEventListener('nexus:ready', () => {
   const N = window.NexusSidebar;
-  const MAX_LIVE_SESSIONS = 2;
+  const MAX_LIVE_SESSIONS = 2;\n\n  function embedUrl(raw) {\n    try {\n      const u = new URL(raw);\n      if (u.hostname === 'open.spotify.com') {\n        const match = u.pathname.match(/^\\/(track|album|playlist|show|episode)\\/([A-Za-z0-9]+)/);\n        if (match) return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;\n      }\n      return u.href;\n    } catch { return raw; }\n  }
 
   N.destroySite = async id => {
     const s = N.sessions.get(id);
@@ -72,8 +72,8 @@ document.addEventListener('nexus:ready', () => {
       iframe.src = item.url;
       iframe.name = 'nexus:' + item.id;
       iframe.loading = 'lazy';
-      iframe.allow = 'autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.allow = 'autoplay *; clipboard-read *; clipboard-write *; encrypted-media *; fullscreen *; picture-in-picture *';\n      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';\n      if (framedUrl !== item.url) host.textContent += ' · media player';
 
       reload.onclick = () => {
         try {
