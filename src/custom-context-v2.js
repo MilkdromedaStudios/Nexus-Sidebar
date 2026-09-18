@@ -100,14 +100,14 @@
     });
 
     document.addEventListener('contextmenu', e => {
-      if (N.accountLocked || N.root?.contains(e.target) || N.settings.customContextMenu === false) return;
+      if (N.isGuest || N.root?.contains(e.target) || N.settings.customContextMenu === false) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       showMenu(e.clientX, e.clientY, selection());
     }, true);
 
     document.addEventListener('mouseup', e => {
-      if (N.accountLocked || e.button !== 0 || N.root?.contains(e.target)) return;
+      if (N.isGuest || e.button !== 0 || N.root?.contains(e.target)) return;
       setTimeout(() => {
         if (N.settings.selectionActions === false) return;
         const text = selection();
