@@ -120,6 +120,8 @@
         let rect;
         try { rect = sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : null; } catch {}
         if (!rect) return;
+        currentX = Math.max(8, Math.min(innerWidth - 8, rect.left + rect.width / 2));
+        currentY = Math.max(8, Math.min(innerHeight - 8, rect.bottom + 8));
         bubble.hidden = false;
         bubble.style.left = Math.max(6, Math.min(innerWidth - 340, rect.left + rect.width / 2 - 150)) + 'px';
         bubble.style.top = Math.max(6, rect.top - 42) + 'px';
