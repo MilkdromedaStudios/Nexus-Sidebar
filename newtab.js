@@ -90,14 +90,15 @@
   }
 
   function appearance() {
+    const view = guestMode ? D : c;
     const r = document.documentElement.style;
-    r.setProperty('--a', c.accent);
-    r.setProperty('--glass', (c.opacity / 100).toFixed(2));
-    r.setProperty('--blur', c.blur + 'px');
-    r.setProperty('--r', c.radius + 'px');
-    r.setProperty('--cols', c.cols);
-    $('dim').style.background = `rgba(0,0,0,${c.dim / 100})`;
-    $('custom-css').textContent = c.css || '';
+    r.setProperty('--a', view.accent);
+    r.setProperty('--glass', (view.opacity / 100).toFixed(2));
+    r.setProperty('--blur', view.blur + 'px');
+    r.setProperty('--r', view.radius + 'px');
+    r.setProperty('--cols', guestMode ? 1 : view.cols);
+    $('dim').style.background = `rgba(0,0,0,${view.dim / 100})`;
+    $('custom-css').textContent = guestMode ? '' : (c.css || '');
   }
 
   function url(v) {
@@ -118,25 +119,26 @@
   }
 
   function background() {
+    const view = guestMode ? D : c;
     cancelAnimationFrame(raf);
     $('stars').style.display = 'none';
     $('bg').style.display = 'none';
 
-    if (c.bgType === 'stars') {
+    if (view.bgType === 'stars') {
       startStars();
       return;
     }
-    if (c.bgType === 'solid') {
-      $('bg').style.cssText = `display:block;background:${c.solid}`;
+    if (view.bgType === 'solid') {
+      $('bg').style.cssText = `display:block;background:${view.solid}`;
       return;
     }
-    if (c.bgType === 'image') {
-      const s = c.bgData || c.bgUrl;
-      if (s) $('bg').style.cssText = `display:block;background:url("${s.replace(/"/g, '')}") center/cover no-repeat`;
-      else $('bg').style.cssText = `display:block;background:linear-gradient(135deg,${c.ga},${c.gb})`;
+    if (view.bgType === 'image') {
+      const source = view.bgData || view.bgUrl;
+      if (source) $('bg').style.cssText = `display:block;background:url("${source.replace(/"/g, '')}") center/cover no-repeat`;
+      else $('bg').style.cssText = `display:block;background:linear-gradient(135deg,${view.ga},${view.gb})`;
       return;
     }
-    $('bg').style.cssText = `display:block;background:linear-gradient(135deg,${c.ga},${c.gb})`;
+    $('bg').style.cssText = `display:block;background:linear-gradient(135deg,${view.ga},${view.gb})`;
   }
 
   function startStars() {
@@ -588,6 +590,8 @@
     await checkDigitBox(true);
     if (!initialized) return init();
     if (wasGuest !== guestMode) {
+      appearance();
+      background();
       clock();
       renderWidgets();
     }
