@@ -3,11 +3,12 @@
   if (window.__nexusDigitBoxAccountLoaded) return;
   window.__nexusDigitBoxAccountLoaded = true;
 
-  const WEBSITE_AUTH_KEY = 'digitbox-deepforge-auth-v1';
-  const DIGITBOX_HOSTS = new Set(['digitbox.dev','www.digitbox.dev','digitbox.pages.dev']);
+  const LOGIN_URL = 'https://digitbox.dev/login?next=/profile';
+  const PROFILE_URL = 'https://digitbox.dev/profile';
+  const DIGITBOX_HOSTS = new Set(['digitbox.dev', 'www.digitbox.dev', 'digitbox.pages.dev']);
   let refreshTimer = 0;
 
-  const start = () => setTimeout(install, 20);
+  const start = () => setTimeout(install, 30);
   if (window.NexusSidebar) start();
   document.addEventListener('nexus:ready', start, { once: true });
 
@@ -15,19 +16,28 @@
     const N = window.NexusSidebar;
     if (!N || N.__digitBoxAccountInstalled) return;
     N.__digitBoxAccountInstalled = true;
-    N.accountLocked = true;
+
     installProfileButton(N);
-    N.openDigitBoxProfile = () => N.accountLocked ? showGate(N) : openProfilePanel(N);
-    wrapNexusActions(N);
-    importWebsiteSession(N);
+    N.showMemberPrompt = (feature = 'Full Nexus', detail = '') => openAccountPanel(N, feature, detail);
+    N.openDigitBoxProfile = () => N.isGuest ? openAccountPanel(N) : openProfilePanel(N);
+
     refresh(N, true);
-    window.addEventListener('focus', () => refresh(N));
+    if (isDigitBoxPage()) {
+      const poll = setInterval(async () => {
+        await refresh(N, true);
+        if (!N.isGuest) clearInterval(poll);
+      }, 1500);
+      window.addEventListener('pagehide', () => clearInterval(poll), { once: true });
+    }
+
+    window.addEventListener('focus', () => refresh(N, true));
     document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(N); });
     chrome.runtime.onMessage.addListener(message => {
       if (message?.type !== 'nexus:digitbox-auth-changed') return;
       applyStatus(N, { ok: true, signedIn: !!message.signedIn, user: message.user || null });
     });
-    refreshTimer = window.setInterval(() => refresh(N), 5 * 60 * 1000);
+
+    refreshTimer = setInterval(() => refresh(N), 30 * 1000);
     window.addEventListener('pagehide', () => clearInterval(refreshTimer), { once: true });
   }
 
@@ -36,88 +46,38 @@
     return DIGITBOX_HOSTS.has(host) || host.endsWith('.digitbox.pages.dev');
   }
 
-  async function importWebsiteSession(N) {
-    if (!isDigitBoxPage()) return;
-    const send = async () => {
-      let raw = '';
-      try { raw = localStorage.getItem(WEBSITE_AUTH_KEY) || ''; } catch {}
-      if (!raw) return;
-      try {
-        const parsed = JSON.parse(raw);
-        if (!parsed?.token) return;
-        const result = await N.msg({ type: 'nexus:digitbox-import', token: parsed.token, expiresAt: parsed.expiresAt || 0 });
-        if (result?.signedIn) applyStatus(N, result);
-      } catch {}
-    };
-    await send();
-    window.addEventListener('storage', event => { if (event.key === WEBSITE_AUTH_KEY) send(); });
-    window.addEventListener('digitbox:cloud-auth-updated', send);
-    setTimeout(send, 900);
-    const poll = setInterval(async () => {
-      if (!N.accountLocked) return clearInterval(poll);
-      await send();
-    }, 1500);
-    window.addEventListener('pagehide', () => clearInterval(poll), { once:true });
-  }
-
   async function refresh(N, force = false) {
     const status = await N.msg({ type: 'nexus:digitbox-status', force });
     applyStatus(N, status);
+    return status;
   }
 
   function applyStatus(N, status) {
+    const wasGuest = !!N.isGuest;
     if (status?.signedIn && status.user) {
+      N.isGuest = false;
+      N.accountTier = 'member';
       N.digitboxUser = status.user;
-      N.accountLocked = false;
-      N.root.classList.remove('account-locked');
-      removeGate(N);
-      paintProfileButton(N);
-      return;
+    } else {
+      N.isGuest = true;
+      N.accountTier = 'guest';
+      N.digitboxUser = null;
     }
-    N.digitboxUser = null;
-    N.accountLocked = true;
-    N.root.classList.add('account-locked');
-    N.root.classList.remove('rail-visible', 'session-hidden');
-    try { sessionStorage.removeItem('nexus-session-hidden'); } catch {}
-    N.panel.classList.remove('open');
-    const palette = N.root.querySelector('#nexus-universal-command-v2');
-    if (palette) palette.hidden = true;
-    const shortcutMenu = N.root.querySelector('#nexus-shortcut-menu');
-    if (shortcutMenu) shortcutMenu.hidden = true;
-    const contextMenu = document.getElementById('nexus-smart-context-v2');
-    const selectionBubble = document.getElementById('nexus-selection-bubble-v2');
-    if (contextMenu) contextMenu.hidden = true;
-    if (selectionBubble) selectionBubble.hidden = true;
-    if (isDigitBoxPage()) removeGate(N); else showGate(N);
+
+    if (N.isGuest && N.active && !N.canUseItem?.(N.active, String(N.active.id || '').startsWith('site-'))) {
+      N.closePanelSoft?.();
+    }
+
+    N.apply?.();
+    N.renderRail?.();
     paintProfileButton(N);
-  }
 
-  function showGate(N) {
-    if (isDigitBoxPage()) return removeGate(N);
-    let gate = N.root.querySelector('#nexus-account-gate');
-    if (!gate) {
-      gate = document.createElement('section');
-      gate.id = 'nexus-account-gate';
-      gate.innerHTML = `
-        <div class="nexus-account-gate-card">
-          <div class="nexus-account-mark">N</div>
-          <small>NEXUS SIDEBAR</small>
-          <h2>Sign in with DigitBox</h2>
-          <p>Nexus uses your DigitBox account for your profile, avatar, and extension access.</p>
-          <button data-login>Continue to DigitBox</button>
-          <button class="secondary" data-check>I've signed in · Check again</button>
-          <span>Already signed in? Open any DigitBox page and Nexus will detect it automatically.</span>
-        </div>`;
-      N.root.append(gate);
-      gate.querySelector('[data-login]').onclick = () => N.msg({ type: 'nexus:digitbox-open-login' });
-      gate.querySelector('[data-check]').onclick = () => refresh(N, true);
+    if (N.active?.id === 'settings') N.renderSettings?.();
+    if (N.active?.id === 'digitbox-profile' || N.active?.id === 'digitbox-account') {
+      N.isGuest ? openAccountPanel(N) : openProfilePanel(N);
     }
-    gate.hidden = false;
-  }
 
-  function removeGate(N) {
-    const gate = N.root.querySelector('#nexus-account-gate');
-    if (gate) gate.hidden = true;
+    if (wasGuest && !N.isGuest) toast(N, 'DigitBox connected · Full Nexus unlocked');
   }
 
   function installProfileButton(N) {
@@ -126,25 +86,29 @@
     const button = document.createElement('button');
     button.id = 'nexus-profile-widget';
     button.className = 'nexus-icon nexus-util';
-    button.title = 'DigitBox profile';
-    button.innerHTML = '<span class="nexus-profile-avatar"><span>N</span></span>';
-    button.onclick = () => {
-      if (N.accountLocked) return showGate(N);
-      openProfilePanel(N);
-    };
+    button.title = 'DigitBox account';
+    button.innerHTML = '<span class="nexus-profile-avatar"><span>G</span></span><i class="nexus-profile-status"></i>';
+    button.onclick = () => N.isGuest ? openAccountPanel(N) : openProfilePanel(N);
     controls.prepend(button);
+    paintProfileButton(N);
   }
 
   function paintProfileButton(N) {
     const button = N.root.querySelector('#nexus-profile-widget');
     if (!button) return;
     const avatar = button.querySelector('.nexus-profile-avatar');
+    const status = button.querySelector('.nexus-profile-status');
     const user = N.digitboxUser;
-    if (!user) {
-      avatar.innerHTML = '<span>N</span>';
-      button.title = 'DigitBox sign-in required';
+
+    button.classList.toggle('guest', !!N.isGuest);
+    status?.classList.toggle('connected', !N.isGuest);
+
+    if (N.isGuest || !user) {
+      avatar.innerHTML = '<span>G</span>';
+      button.title = 'Guest mode · Sign in to unlock full Nexus';
       return;
     }
+
     button.title = user.displayName || user.email || 'DigitBox profile';
     if (user.avatarUrl) {
       const img = document.createElement('img');
@@ -159,22 +123,89 @@
     }
   }
 
-  async function openProfilePanel(N) {
-    const user = N.digitboxUser;
-    if (!user) return showGate(N);
+  function openLocalPanel(N, id, title, subtitle) {
     N.runCleanup?.();
-    N.applyPanelWidth?.('digitbox-profile');
-    N.active = { id: 'digitbox-profile', name: 'Profile', icon: 'home', type: 'local' };
+    N.applyPanelWidth?.(id);
+    N.active = { id, name: title, icon: 'home', type: 'account-local' };
     N.setHeader?.(N.active);
-    N.root.querySelector('#nexus-title').textContent = user.displayName || 'DigitBox Profile';
-    N.root.querySelector('#nexus-subtitle').textContent = 'DigitBox account';
+    N.root.querySelector('#nexus-title').textContent = title;
+    N.root.querySelector('#nexus-subtitle').textContent = subtitle;
     N.panel.classList.add('open');
     N.root.classList.add('rail-visible');
     N.showLocal?.();
     N.body.replaceChildren();
+  }
 
+  function openAccountPanel(N, feature = '', detail = '') {
+    openLocalPanel(N, 'digitbox-account', 'Guest mode', 'DigitBox account');
     const wrap = document.createElement('div');
     wrap.className = 'nexus-account-panel';
+
+    const hero = document.createElement('section');
+    hero.className = 'nexus-account-profile-card guest-card';
+    hero.innerHTML = `
+      <div class="nexus-account-avatar-large guest-avatar">G</div>
+      <div class="nexus-account-profile-copy">
+        <small>NEXUS GUEST</small>
+        <h2>Guest mode</h2>
+        <p>Useful basics stay available without an account.</p>
+        <span class="nexus-account-role">Limited</span>
+      </div>`;
+
+    const limits = document.createElement('section');
+    limits.className = 'nexus-guest-limits';
+    if (feature) {
+      const requested = document.createElement('div');
+      requested.className = 'nexus-member-needed';
+      requested.innerHTML = '<b></b><p></p>';
+      requested.querySelector('b').textContent = feature + ' requires DigitBox';
+      requested.querySelector('p').textContent = detail || 'Sign in to unlock this Nexus feature.';
+      limits.append(requested);
+    }
+    limits.insertAdjacentHTML('beforeend', `
+      <div class="nexus-limit-grid">
+        <div><b>Available</b><span>Launchpad</span><span>History</span><span>Bookmarks</span><span>1 custom site</span><span>Modern theme</span></div>
+        <div><b>Sign in to unlock</b><span>Universal Command</span><span>F1 Racing + Focus</span><span>ChatGPT + widgets</span><span>Unlimited custom sites</span><span>All themes + advanced tools</span></div>
+      </div>`);
+
+    const actions = document.createElement('section');
+    actions.className = 'nexus-account-actions';
+    const login = document.createElement('button');
+    login.textContent = 'Sign in with DigitBox';
+    login.className = 'primary';
+    const check = document.createElement('button');
+    check.textContent = 'Check login now';
+    const open = document.createElement('button');
+    open.textContent = 'Open digitbox.dev';
+    login.onclick = () => openExternal(N, LOGIN_URL);
+    open.onclick = () => openExternal(N, 'https://digitbox.dev/');
+    check.onclick = async () => {
+      check.disabled = true;
+      check.textContent = 'Checking…';
+      const status = await refresh(N, true);
+      if (status?.signedIn) return;
+      check.disabled = false;
+      check.textContent = 'Still in Guest mode';
+      setTimeout(() => { check.textContent = 'Check login now'; }, 1500);
+    };
+    actions.append(login, check, open);
+
+    const note = document.createElement('section');
+    note.className = 'nexus-account-meta';
+    note.innerHTML = '<b>Automatic detection</b><p>After you sign in on digitbox.dev, Nexus detects the DigitBox tab and unlocks full features automatically. You can also press “Check login now”.</p>';
+
+    wrap.append(hero, limits, actions, note);
+    N.body.append(wrap);
+  }
+
+  async function openProfilePanel(N) {
+    const user = N.digitboxUser;
+    if (!user) return openAccountPanel(N);
+
+    openLocalPanel(N, 'digitbox-profile', user.displayName || 'DigitBox Profile', 'DigitBox account');
+    const wrap = document.createElement('div');
+    wrap.className = 'nexus-account-panel';
+
     const hero = document.createElement('section');
     hero.className = 'nexus-account-profile-card';
     const role = user.owner ? 'Owner' : user.admin ? 'Admin' : 'DigitBox member';
@@ -189,9 +220,13 @@
     hero.querySelector('h2').textContent = user.displayName || 'Player';
     hero.querySelector('p').textContent = user.email || '';
     hero.querySelector('.nexus-account-role').textContent = role;
+
     const avatarBox = hero.querySelector('.nexus-account-avatar-large');
     if (user.avatarUrl) {
-      const img = document.createElement('img'); img.src = user.avatarUrl; img.alt = ''; avatarBox.append(img);
+      const img = document.createElement('img');
+      img.src = user.avatarUrl;
+      img.alt = '';
+      avatarBox.append(img);
     } else {
       avatarBox.textContent = String(user.displayName || user.email || 'D').charAt(0).toUpperCase();
     }
@@ -200,17 +235,19 @@
     actions.className = 'nexus-account-actions';
     const upload = document.createElement('button');
     upload.textContent = 'Change profile picture';
-    const open = document.createElement('button');
-    open.textContent = 'Open DigitBox profile';
+    const profile = document.createElement('button');
+    profile.textContent = 'Open DigitBox profile';
     const refreshButton = document.createElement('button');
     refreshButton.textContent = 'Refresh account';
     const remove = document.createElement('button');
     remove.textContent = 'Remove picture';
     remove.className = 'secondary';
+
     const file = document.createElement('input');
     file.type = 'file';
     file.accept = 'image/png,image/jpeg,image/webp';
     file.hidden = true;
+
     upload.onclick = () => file.click();
     file.onchange = async () => {
       const picked = file.files?.[0];
@@ -231,8 +268,9 @@
         upload.textContent = 'Change profile picture';
       }
     };
-    open.onclick = () => N.msg({ type: 'nexus:digitbox-open-profile' });
-    refreshButton.onclick = async () => { await refresh(N, true); if (!N.accountLocked) openProfilePanel(N); };
+
+    profile.onclick = () => openExternal(N, PROFILE_URL);
+    refreshButton.onclick = async () => { await refresh(N, true); if (!N.isGuest) openProfilePanel(N); };
     remove.onclick = async () => {
       if (!confirm('Remove your DigitBox profile picture?')) return;
       const result = await N.msg({ type: 'nexus:digitbox-avatar-delete' });
@@ -242,19 +280,26 @@
         openProfilePanel(N);
       }
     };
-    actions.append(upload, open, refreshButton, remove, file);
+    actions.append(upload, profile, refreshButton, remove, file);
 
     const status = document.createElement('section');
     status.className = 'nexus-account-meta';
-    status.innerHTML = '<b>Connected</b><p>Your DigitBox login is required to use Nexus. Nexus re-checks the account automatically and locks if the session expires.</p>';
+    status.innerHTML = '<b>Full Nexus unlocked</b><p>Your DigitBox session is connected. Nexus will periodically re-check it and return to Guest mode if the session expires.</p>';
 
     wrap.append(hero, actions, status);
     N.body.append(wrap);
   }
 
+  async function openExternal(N, url) {
+    const result = await N.msg({ type: 'nexus:open-tab', url });
+    if (result?.ok) return;
+    try { window.open(url, '_blank', 'noopener,noreferrer'); } catch {}
+  }
+
   async function prepareAvatar(file) {
-    if (!['image/png','image/jpeg','image/webp'].includes(file.type)) throw new Error('Use a PNG, JPG, or WebP image.');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Use a PNG, JPG, or WebP image.');
     if (file.size > 10 * 1024 * 1024) throw new Error('Choose an image smaller than 10 MB.');
+
     const dataUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(new Error('Could not read the image.'));
@@ -267,33 +312,29 @@
       img.onerror = () => reject(new Error('Could not decode the image.'));
       img.src = dataUrl;
     });
+
     const size = 512;
     const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext('2d');
     const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
-    const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
-    ctx.drawImage(image, (size - w) / 2, (size - h) / 2, w, h);
+    const width = image.naturalWidth * scale;
+    const height = image.naturalHeight * scale;
+    ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
     return canvas.toDataURL('image/webp', .88);
   }
 
-  function wrapNexusActions(N) {
-    if (N.__digitBoxAccountWrapped) return;
-    N.__digitBoxAccountWrapped = true;
-    const activate = N.activate?.bind(N);
-    if (activate) N.activate = (item, custom = false) => N.accountLocked ? showGate(N) : activate(item, custom);
-    const show = N.show?.bind(N);
-    if (show) N.show = () => N.accountLocked ? showGate(N) : show();
-    const bindCommand = () => {
-      if (!window.NexusCommandV2?.open || window.NexusCommandV2.__digitBoxWrapped) return false;
-      const original = window.NexusCommandV2.open.bind(window.NexusCommandV2);
-      window.NexusCommandV2.open = (...args) => N.accountLocked ? showGate(N) : original(...args);
-      window.NexusCommandV2.__digitBoxWrapped = true;
-      return true;
-    };
-    if (!bindCommand()) {
-      const observer = new MutationObserver(() => { if (bindCommand()) observer.disconnect(); });
-      observer.observe(N.root, { childList: true, subtree: true });
+  function toast(N, text) {
+    let item = N.root.querySelector('.nx-toast');
+    if (!item) {
+      item = document.createElement('div');
+      item.className = 'nx-toast';
+      N.root.append(item);
     }
+    item.textContent = text;
+    item.classList.add('show');
+    clearTimeout(item._timer);
+    item._timer = setTimeout(() => item.classList.remove('show'), 2200);
   }
 })();
