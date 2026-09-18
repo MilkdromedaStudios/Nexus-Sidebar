@@ -30,10 +30,8 @@ async function validateToken(token, expiresAt = 0) {
   if (!token) return null;
   if (Number(expiresAt) && Number(expiresAt) <= Date.now()) return null;
   try {
-    const [account, profile] = await Promise.all([
-      requestJson('/v1/auth/me', token).catch(() => ({ user: null })),
-      requestJson('/v1/profile/me', token),
-    ]);
+    const account = await requestJson('/v1/auth/me', token);
+    const profile = await requestJson('/v1/profile/me', token).catch(() => ({ user: {} }));
     const user = { ...(account?.user || {}), ...(profile?.user || {}) };
     if (!user.id) return null;
     const auth = { token, expiresAt: Number(expiresAt) || 0, user, checkedAt: Date.now() };
