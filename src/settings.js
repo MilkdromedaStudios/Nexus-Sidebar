@@ -37,7 +37,7 @@ document.addEventListener('nexus:ready',()=>{
     const css=document.createElement('textarea');css.rows=8;css.value=s.customCSS||'';css.placeholder='#nexus-panel { ... }';css.disabled=!!N.isGuest;css.oninput=()=>{if(N.isGuest)return; s.customCSS=css.value;N.customStyle.textContent=css.value;clearTimeout(css._t);css._t=setTimeout(()=>N.saveSettings(),350)};custom.append(row('Custom CSS',css,N.isGuest?'Sign in with DigitBox to use Custom CSS':'Loaded last'));box.append(custom);
     const account=section('DigitBox account');
     const accountStatus=document.createElement('div');accountStatus.className='nexus-update-status';accountStatus.textContent=N.isGuest?'Guest mode · basic features only':`Connected · ${N.digitboxUser?.displayName||N.digitboxUser?.email||'DigitBox member'}`;
-    const accountAction=document.createElement('button');accountAction.textContent=N.isGuest?'Sign in to unlock full Nexus':'Open profile';accountAction.onclick=()=>N.openDigitBoxProfile?.();
+    const accountAction=document.createElement('button');accountAction.textContent=N.isGuest?'Sign in to unlock full Nexus':'Open profile';accountAction.onclick=()=>N.isGuest?N.msg({type:'nexus:open-tab',url:'https://digitbox.dev/login?next=/profile'}):N.openDigitBoxProfile?.();
     account.append(row('Account status',accountStatus,N.isGuest?'Modern theme · 1 custom site · Launchpad · History · Bookmarks':'Full Nexus is unlocked'),row('Account',accountAction));
     box.prepend(account);
     N.body.append(box);
