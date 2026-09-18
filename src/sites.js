@@ -113,6 +113,10 @@ document.addEventListener('nexus:ready', () => {
   };
 
   N.addSite = async (name, url) => {
+    if (N.isGuest && (N.sites || []).length >= 1) {
+      N.showMemberPrompt?.('More custom sites', 'Guest mode includes 1 custom site. Sign in with DigitBox for unlimited custom sites.');
+      return false;
+    }
     url = String(url || '').trim();
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
     try { url = new URL(url).href; } catch { return false; }
