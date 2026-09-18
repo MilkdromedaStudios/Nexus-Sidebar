@@ -1,6 +1,19 @@
 document.addEventListener('nexus:ready', () => {
   const N = window.NexusSidebar;
-  const MAX_LIVE_SESSIONS = 2;\n\n  function embedUrl(raw) {\n    try {\n      const u = new URL(raw);\n      if (u.hostname === 'open.spotify.com') {\n        const match = u.pathname.match(/^\\/(track|album|playlist|show|episode)\\/([A-Za-z0-9]+)/);\n        if (match) return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;\n      }\n      return u.href;\n    } catch { return raw; }\n  }
+  const MAX_LIVE_SESSIONS = 2;
+
+  function embedUrl(raw) {
+    try {
+      const u = new URL(raw);
+      if (u.hostname === 'open.spotify.com') {
+        const match = u.pathname.match(/^\/(track|album|playlist|show|episode)\/([A-Za-z0-9]+)/);
+        if (match) return `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
+      }
+      return u.href;
+    } catch {
+      return raw;
+    }
+  }
 
   N.destroySite = async id => {
     const s = N.sessions.get(id);
@@ -57,7 +70,7 @@ document.addEventListener('nexus:ready', () => {
 
       const external = document.createElement('button');
       external.textContent = '↗';
-      external.title = 'Open in browser tab';
+      external.title = 'Open full site in browser tab';
       external.onclick = () => N.msg({ type: 'nexus:open-tab', url: item.url });
 
       const reload = document.createElement('button');
@@ -69,11 +82,14 @@ document.addEventListener('nexus:ready', () => {
       close.title = 'End live session';
 
       const iframe = document.createElement('iframe');
-      iframe.src = item.url;
+      const framedUrl = embedUrl(item.url);
+      iframe.src = framedUrl;
       iframe.name = 'nexus:' + item.id;
-      iframe.loading = 'lazy';
-      iframe.allow = 'autoplay *; clipboard-read *; clipboard-write *; encrypted-media *; fullscreen *; picture-in-picture *';\n      iframe.allowFullscreen = true;
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';\n      if (framedUrl !== item.url) host.textContent += ' · media player';
+      iframe.loading = 'eager';
+      iframe.allow = 'autoplay *; clipboard-read *; clipboard-write *; encrypted-media *; fullscreen *; picture-in-picture *';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      if (framedUrl !== item.url) host.textContent += ' · media player';
 
       reload.onclick = () => {
         try {
