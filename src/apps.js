@@ -57,14 +57,16 @@ document.addEventListener('nexus:ready', () => {
     N.icons.append(group);
     for (const id of N.normalizeLayout()) {
       const item = getItem(id);
-      if (!item || hidden(id)) continue;
-      group.append(iconButton(item, String(item.id).startsWith('site-')));
+      const custom = String(item?.id || '').startsWith('site-');
+      if (!item || hidden(id) || !N.canUseItem?.(item, custom)) continue;
+      group.append(iconButton(item, custom));
     }
     updatePomodoroMini();
   };
 
   N.closeActive = () => N.closePanelSoft();
   N.activate = async (item, custom = false) => {
+    if (!N.canUseItem?.(item, custom)) return N.showMemberPrompt?.(item?.name || 'This feature');
     N.runCleanup();
     N.active = item;
     N.setHeader(item, custom);
@@ -76,6 +78,7 @@ document.addEventListener('nexus:ready', () => {
     N.body.replaceChildren();
     if (item.id === 'launchpad') renderLaunchpad();
     else if (item.id === 'history') renderHistory();
+    else if (item.id === 'bookmarks') renderBookmarks();
     else if (item.id === 'pomodoro') renderPomodoro();
     else if (item.id === 'games') N.renderGames?.();
     else if (item.id === 'settings') N.renderSettings?.();
@@ -106,31 +109,38 @@ document.addEventListener('nexus:ready', () => {
     cards.className = 'nexus-dashboard';
     const time = document.createElement('div'); time.className = 'nexus-card';
     const weather = document.createElement('div'); weather.className = 'nexus-card';
-    cards.append(time, weather);
+    cards.append(time);
+    if (!N.isGuest) cards.append(weather);
     const tick = () => {
       const d = new Date();
       time.innerHTML = `<b>${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</b><small>${d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}</small>`;
     };
     tick();
     const t = setInterval(tick, 1000); N.cleanup.push(() => clearInterval(t));
-    weather.innerHTML = '<b>Weather</b><small>Loading…</small>';
-    N.msg({ type: 'nexus:weather', location: N.settings.weatherLocation || '' }).then(r => {
-      if (r?.ok) weather.innerHTML = `<b>${r.weather.temp}°F · ${r.weather.condition}</b><small>${r.weather.location || 'Current area'}</small>`;
-      else weather.querySelector('small').textContent = 'Unavailable';
-    });
+    if (!N.isGuest) {
+      weather.innerHTML = '<b>Weather</b><small>Loading…</small>';
+      N.msg({ type: 'nexus:weather', location: N.settings.weatherLocation || '' }).then(r => {
+        if (r?.ok) weather.innerHTML = `<b>${r.weather.temp}°F · ${r.weather.condition}</b><small>${r.weather.location || 'Current area'}</small>`;
+        else weather.querySelector('small').textContent = 'Unavailable';
+      });
+    }
 
     const qa = document.createElement('div');
     qa.className = 'nexus-quick';
-    [
+    const quickActions = [
       ['↻', 'Reload', () => N.msg({ type: 'nexus:reload' })],
       ['◷', 'History', () => N.activate(N.FEATURES.find(x => x.id === 'history'))],
+      ['▱', 'Bookmarks', () => N.activate(N.FEATURES.find(x => x.id === 'bookmarks'))]
+    ];
+    if (!N.isGuest) quickActions.push(
       ['25', 'Focus', () => N.activate(N.FEATURES.find(x => x.id === 'pomodoro'))],
       ['⚑', 'F1 race', () => N.activate(N.FEATURES.find(x => x.id === 'games'))]
-    ].forEach(([i, n, f]) => { const b = document.createElement('button'); b.innerHTML = `<b>${i}</b><small>${n}</small>`; b.onclick = f; qa.append(b); });
+    );
+    quickActions.forEach(([i, n, f]) => { const b = document.createElement('button'); b.innerHTML = `<b>${i}</b><small>${n}</small>`; b.onclick = f; qa.append(b); });
 
     const apps = document.createElement('div');
     apps.className = 'nexus-appgrid';
-    [...N.FEATURES.filter(x => x.id !== 'launchpad' && !hidden(x.id)), ...N.sites.filter(x => !hidden(x.id))].forEach(x => {
+    [...N.FEATURES.filter(x => x.id !== 'launchpad' && !hidden(x.id)), ...N.sites.filter(x => !hidden(x.id))].filter(x => N.canUseItem?.(x, String(x.id).startsWith('site-'))).forEach(x => {
       const b = document.createElement('button'); b.append(N.iconNode(x, String(x.id).startsWith('site-')));
       const s = document.createElement('small'); s.textContent = x.name; b.append(s);
       b.onclick = () => N.activate(x, String(x.id).startsWith('site-')); apps.append(b);
@@ -146,6 +156,49 @@ document.addEventListener('nexus:ready', () => {
       (r.results || []).slice(0, 60).forEach(x => { const a = document.createElement('a'); a.href = x.url; a.textContent = x.title || x.url; list.append(a); });
     };
     input.oninput = load; load();
+  }
+
+  async function renderBookmarks() {
+    const top = document.createElement('div');
+    top.className = 'nexus-inline-actions';
+    const search = document.createElement('input');
+    search.className = 'nexus-wide';
+    search.placeholder = 'Search bookmarks';
+    const add = document.createElement('button');
+    add.textContent = 'Bookmark this page';
+    const list = document.createElement('div');
+    list.className = 'nexus-list';
+    top.append(add);
+    N.body.append(search, top, list);
+
+    const flatten = items => {
+      const out = [];
+      const walk = arr => (arr || []).forEach(x => { out.push(x); if (x.children) walk(x.children); });
+      walk(items);
+      return out;
+    };
+    const load = async () => {
+      const r = await N.msg({ type: 'nexus:next:bookmarks', query: search.value.trim() });
+      list.replaceChildren();
+      flatten(r?.items || []).filter(x => x.url).slice(0, 60).forEach(x => {
+        const a = document.createElement('a');
+        a.href = x.url;
+        a.textContent = x.title || x.url;
+        list.append(a);
+      });
+      if (!list.children.length) {
+        const empty = document.createElement('div');
+        empty.className = 'nexus-empty';
+        empty.textContent = 'No bookmarks found.';
+        list.append(empty);
+      }
+    };
+    add.onclick = async () => {
+      await N.msg({ type: 'nexus:next:bookmark-add', title: document.title, url: location.href });
+      await load();
+    };
+    search.oninput = load;
+    load();
   }
 
   async function renderPomodoro() {
