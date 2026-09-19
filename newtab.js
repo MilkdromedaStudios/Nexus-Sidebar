@@ -43,14 +43,20 @@
   let raf = 0;
   let stars = [];
   let accountUser = null;
+  let signedIn = false;
   let guestMode = true;
   let initialized = false;
   let initializing = false;
 
+  function hasPro(entitlements) {
+    return Array.isArray(entitlements?.features) && entitlements.features.includes('nexus_pro');
+  }
+
   async function checkDigitBox(force = false) {
     const status = await msg({ type: 'nexus:digitbox-status', force });
-    accountUser = status?.signedIn ? (status.user || null) : null;
-    guestMode = !status?.signedIn;
+    signedIn = !!status?.signedIn;
+    accountUser = signedIn ? (status.user || null) : null;
+    guestMode = !(signedIn && hasPro(status?.entitlements));
     document.body.classList.toggle('guest-mode', guestMode);
     paintAccountBanner();
     return !guestMode;
@@ -65,8 +71,18 @@
     if (!banner) {
       banner = document.createElement('div');
       banner.id = 'newtab-account-banner';
-      banner.innerHTML = '<div><b>Guest mode</b><span>Search + bookmarks are available. Sign in for tasks, focus, notes, weather, customization, and full Nexus.</span></div><button>Sign in with DigitBox</button>';
       document.body.append(banner);
+    }
+
+    if (signedIn) {
+      banner.innerHTML = '<div><b>DigitBox Free</b><span>Search + bookmarks are available. DigitBox Pro unlocks tasks, focus, notes, weather, customization, and full Nexus.</span></div><button>Upgrade to Pro</button>';
+      banner.querySelector('button').onclick = async () => {
+        const url = 'https://digitbox.dev/profile#digitbox-pro';
+        const result = await msg({ type: 'nexus:open-tab', url });
+        if (!result?.ok) window.open(url, '_blank', 'noopener,noreferrer');
+      };
+    } else {
+      banner.innerHTML = '<div><b>Guest mode</b><span>Search + bookmarks are available. Sign in with DigitBox to use your account.</span></div><button>Sign in with DigitBox</button>';
       banner.querySelector('button').onclick = async () => {
         const url = 'https://digitbox.dev/login?next=/profile';
         const result = await msg({ type: 'nexus:open-tab', url });
@@ -537,7 +553,6 @@
     setInterval(clock, 1000);
     renderWidgets();
     prefs();
-
     $('customize').onclick = () => $('prefs').classList.add('open');
     $('prefs-close').onclick = () => $('prefs').classList.remove('open');
     $('search').onsubmit = e => {
@@ -599,8 +614,9 @@
   chrome.runtime.onMessage.addListener(message => {
     if (message?.type !== 'nexus:digitbox-auth-changed') return;
     const wasGuest = guestMode;
-    guestMode = !message.signedIn;
-    accountUser = message.signedIn ? (message.user || null) : null;
+    signedIn = !!message.signedIn;
+    accountUser = signedIn ? (message.user || null) : null;
+    guestMode = !(signedIn && hasPro(message.entitlements));
     document.body.classList.toggle('guest-mode', guestMode);
     paintAccountBanner();
     if (initialized && wasGuest !== guestMode) {
@@ -608,6 +624,8 @@
       background();
       clock();
       renderWidgets();
+    } else if (initialized) {
+      clock();
     }
   });
   window.addEventListener('focus', recheckAccount);
