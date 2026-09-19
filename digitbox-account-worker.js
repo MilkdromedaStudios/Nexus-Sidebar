@@ -14,6 +14,22 @@ const dbGet = defaults => new Promise(resolve => chrome.storage.local.get(defaul
 const dbSet = value => new Promise(resolve => chrome.storage.local.set(value, resolve));
 const dbRemove = key => new Promise(resolve => chrome.storage.local.remove(key, resolve));
 
+function freeEntitlements() {
+  return { plan: 'free', features: [], subscriptionStatus: 'none', cancelAtPeriodEnd: false, currentPeriodEnd: null };
+}
+
+function normalizeEntitlements(value) {
+  const entitlements = value && typeof value === 'object' ? value : freeEntitlements();
+  const features = Array.isArray(entitlements.features) ? entitlements.features.filter(x => typeof x === 'string') : [];
+  return {
+    plan: features.includes('nexus_pro') ? 'pro' : 'free',
+    features,
+    subscriptionStatus: String(entitlements.subscriptionStatus || 'none'),
+    cancelAtPeriodEnd: !!entitlements.cancelAtPeriodEnd,
+    currentPeriodEnd: Number(entitlements.currentPeriodEnd) || null,
+  };
+}
+
 async function requestJson(path, token) {
   const response = await fetch(DIGITBOX.api + path, {
     method: 'GET',
@@ -32,9 +48,11 @@ async function validateToken(token, expiresAt = 0) {
   try {
     const account = await requestJson('/v1/auth/me', token);
     const profile = await requestJson('/v1/profile/me', token).catch(() => ({ user: {} }));
+    const billing = await requestJson('/v1/billing/status', token).catch(() => ({ entitlements: freeEntitlements() }));
     const user = { ...(account?.user || {}), ...(profile?.user || {}) };
     if (!user.id) return null;
-    const auth = { token, expiresAt: Number(expiresAt) || 0, user, checkedAt: Date.now() };
+    const entitlements = normalizeEntitlements(billing?.entitlements);
+    const auth = { token, expiresAt: Number(expiresAt) || 0, user, entitlements, checkedAt: Date.now() };
     await dbSet({ [DIGITBOX.storageKey]: auth });
     broadcast(auth);
     return auth;
@@ -87,18 +105,28 @@ async function importFromDigitBoxTabs() {
   return null;
 }
 
+function signedInStatus(auth) {
+  return {
+    ok: true,
+    signedIn: true,
+    user: auth.user,
+    entitlements: normalizeEntitlements(auth.entitlements),
+    expiresAt: auth.expiresAt || 0,
+  };
+}
+
 async function status(force = false) {
   const saved = (await dbGet({ [DIGITBOX.storageKey]: null }))[DIGITBOX.storageKey];
   if (saved?.token && !force && Date.now() - Number(saved.checkedAt || 0) < DIGITBOX.maxAge) {
-    return { ok: true, signedIn: true, user: saved.user, expiresAt: saved.expiresAt || 0 };
+    return signedInStatus(saved);
   }
   if (saved?.token) {
     const checked = await validateToken(saved.token, saved.expiresAt);
-    if (checked) return { ok: true, signedIn: true, user: checked.user, expiresAt: checked.expiresAt || 0 };
+    if (checked) return signedInStatus(checked);
   }
   const detected = await importFromDigitBoxTabs();
-  if (detected) return { ok: true, signedIn: true, user: detected.user, expiresAt: detected.expiresAt || 0 };
-  return { ok: true, signedIn: false, user: null };
+  if (detected) return signedInStatus(detected);
+  return { ok: true, signedIn: false, user: null, entitlements: freeEntitlements() };
 }
 
 async function uploadAvatar(dataUrl) {
@@ -138,6 +166,7 @@ async function broadcast(auth) {
     type: 'nexus:digitbox-auth-changed',
     signedIn: !!auth,
     user: auth?.user || null,
+    entitlements: normalizeEntitlements(auth?.entitlements),
   };
   const tabs = await chrome.tabs.query({}).catch(() => []);
   for (const tab of tabs) {
@@ -153,7 +182,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === 'nexus:digitbox-status') return status(!!message.force);
     if (message.type === 'nexus:digitbox-import') {
       const auth = await validateToken(message.token, message.expiresAt);
-      return { ok: true, signedIn: !!auth, user: auth?.user || null };
+      return { ok: true, signedIn: !!auth, user: auth?.user || null, entitlements: normalizeEntitlements(auth?.entitlements) };
     }
     if (message.type === 'nexus:digitbox-open-login') {
       const tab = await chrome.tabs.create({ url: DIGITBOX.login });
