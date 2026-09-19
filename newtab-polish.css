@@ -1,0 +1,15 @@
+/* Keep the signed-out new-tab prompt minimal. */
+#newtab-account-banner{
+  left:auto!important;
+  right:18px!important;
+  width:auto!important;
+  transform:none!important;
+  padding:8px!important;
+}
+#newtab-account-banner>div{display:none!important}
+#newtab-account-banner button{white-space:nowrap!important}
+body.guest-mode #dash{padding-bottom:78px!important}
+@media(max-width:640px){
+  #newtab-account-banner{right:12px!important;bottom:12px!important;width:auto!important;align-items:center!important}
+  #newtab-account-banner button{width:auto!important}
+}
