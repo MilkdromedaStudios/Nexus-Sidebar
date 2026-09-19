@@ -48,7 +48,7 @@
       if (action) {
         action.querySelector('small')?.remove();
         const button = action.querySelector('button');
-        if (button) button.textContent = N.isGuest ? 'Sign in with DigitBox' : 'Open profile';
+        if (button) button.textContent = N.isSignedIn ? 'Open profile' : 'Sign in with DigitBox';
       }
     }
 
@@ -61,8 +61,8 @@
     }
 
     for (const button of N.body.querySelectorAll('button')) {
-      if (button.textContent.trim() === 'Guest limit reached') button.textContent = 'Sign in to add more';
-      if (button.textContent.trim() === 'Sign in to unlock full Nexus') button.textContent = 'Sign in with DigitBox';
+      if (button.textContent.trim() === 'Guest limit reached') button.textContent = N.isSignedIn ? 'Upgrade to Pro' : 'Sign in to add more';
+      if (button.textContent.trim() === 'Sign in to unlock full Nexus') button.textContent = N.isSignedIn ? 'Upgrade to DigitBox Pro' : 'Sign in with DigitBox';
     }
   }
 })();
