@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Nexus Sidebar: All your needs in one place",
-  "version": "17.3.2",
-  "description": "Browser productivity workspace with DigitBox member unlocks, dynamic collision-free sidebar layout, Settings-managed feature shortcuts, universal commands, resizable panels and Liquid Glass.",
+  "version": "17.3.3",
+  "description": "Browser productivity workspace with DigitBox accounts, dynamic sidebar layout, Settings-managed feature shortcuts, universal commands, resizable panels and Liquid Glass.",
   "author": "Numberstring Productions",
   "permissions": [
     "storage",
@@ -101,7 +101,8 @@
         "src/panel-resize.js",
         "src/digitbox-account.js",
         "src/sidebar-shortcuts.js",
-        "src/dynamic-rail-layout.js"
+        "src/dynamic-rail-layout.js",
+        "src/account-ui-polish.js"
       ],
       "run_at": "document_start",
       "all_frames": false,
