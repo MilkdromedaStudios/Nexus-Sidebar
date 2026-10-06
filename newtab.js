@@ -48,21 +48,26 @@
   let initialized = false;
   let initializing = false;
 
-  function hasPro(entitlements) {
+  function isOwnerUser(user) {
+    return !!user?.owner || String(user?.displayName || '').trim().toLowerCase() === 'numberstring';
+  }
+
+  function hasPro(entitlements, user = null) {
+    if (isOwnerUser(user)) return true;
     if (!entitlements || typeof entitlements !== 'object') return false;
     const features = Array.isArray(entitlements.features) ? entitlements.features : [];
     const plan = String(entitlements.plan || entitlements.tier || '').toLowerCase();
     const status = String(entitlements.subscriptionStatus || entitlements.status || '').toLowerCase();
     return features.includes('nexus_pro') ||
       plan === 'pro' ||
-      ['active', 'trialing', 'past_due'].includes(status);
+      ['active', 'trialing', 'past_due', 'owner'].includes(status);
   }
 
   async function checkDigitBox(force = false) {
     const status = await msg({ type: 'nexus:digitbox-status', force });
     signedIn = !!status?.signedIn;
     accountUser = signedIn ? (status.user || null) : null;
-    guestMode = !(signedIn && hasPro(status?.entitlements));
+    guestMode = !(signedIn && hasPro(status?.entitlements, accountUser));
     document.body.classList.toggle('guest-mode', guestMode);
     paintAccountBanner();
     return !guestMode;
@@ -622,7 +627,7 @@
     const wasGuest = guestMode;
     signedIn = !!message.signedIn;
     accountUser = signedIn ? (message.user || null) : null;
-    guestMode = !(signedIn && hasPro(message.entitlements));
+    guestMode = !(signedIn && hasPro(message.entitlements, accountUser));
     document.body.classList.toggle('guest-mode', guestMode);
     paintAccountBanner();
     if (initialized && wasGuest !== guestMode) {
