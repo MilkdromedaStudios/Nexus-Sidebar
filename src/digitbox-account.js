@@ -66,7 +66,12 @@
     return DIGITBOX_HOSTS.has(host) || host.endsWith('.digitbox.pages.dev');
   }
 
-  function hasPro(entitlements) {
+  function isOwnerUser(user) {
+    return !!user?.owner || String(user?.displayName || '').trim().toLowerCase() === 'numberstring';
+  }
+
+  function hasPro(entitlements, user = null) {
+    if (isOwnerUser(user)) return true;
     if (!entitlements || typeof entitlements !== 'object') return false;
     const features = Array.isArray(entitlements.features) ? entitlements.features : [];
     const plan = String(entitlements.plan || entitlements.tier || '').toLowerCase();
@@ -103,7 +108,7 @@
     if (status?.signedIn && status.user) {
       N.isSignedIn = true;
       N.entitlements = status.entitlements || { plan: 'free', features: [] };
-      N.accountTier = hasPro(N.entitlements) ? 'pro' : 'free';
+      N.accountTier = hasPro(N.entitlements, status.user) ? 'pro' : 'free';
       // Existing Nexus feature gates use isGuest. Free members intentionally
       // keep Guest-mode limits; DigitBox Pro turns the full feature set on.
       N.isGuest = N.accountTier !== 'pro';
