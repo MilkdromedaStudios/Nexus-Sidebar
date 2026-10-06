@@ -19,6 +19,21 @@ function freeEntitlements() {
   return { plan: 'free', features: [], subscriptionStatus: 'none', cancelAtPeriodEnd: false, currentPeriodEnd: null };
 }
 
+function ownerEntitlements() {
+  return {
+    plan: 'pro',
+    features: ['nexus_pro'],
+    subscriptionStatus: 'owner',
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+    complimentary: true,
+  };
+}
+
+function isOwnerUser(user) {
+  return !!user?.owner || String(user?.displayName || '').trim().toLowerCase() === 'numberstring';
+}
+
 const PRO_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 function entitlementLooksPro(value) {
@@ -95,7 +110,13 @@ async function validateToken(token, expiresAt = 0) {
   let entitlements;
   let billingCheckedAt = Number(sameSavedToken?.billingCheckedAt || 0);
   let billingReachable = !!billing;
-  if (billing) {
+
+  // DigitBox's permanent owner gets Nexus Pro as an included account benefit.
+  // The owner never needs a Stripe subscription.
+  if (isOwnerUser(user)) {
+    entitlements = ownerEntitlements();
+    billingCheckedAt = Date.now();
+  } else if (billing) {
     entitlements = normalizeEntitlements(billing.entitlements);
     billingCheckedAt = Date.now();
   } else {
