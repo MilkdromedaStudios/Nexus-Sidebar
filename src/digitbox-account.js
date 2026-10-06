@@ -7,6 +7,8 @@
   const PROFILE_URL = 'https://digitbox.dev/profile';
   const PRO_URL = 'https://digitbox.dev/profile#digitbox-pro';
   const DIGITBOX_HOSTS = new Set(['digitbox.dev', 'www.digitbox.dev', 'digitbox.pages.dev']);
+  const WEBSITE_STORAGE_KEY = 'digitbox-deepforge-auth-v1';
+  const PRO_STATUSES = new Set(['active', 'trialing', 'past_due']);
   let refreshTimer = 0;
 
   const start = () => setTimeout(install, 30);
@@ -24,13 +26,23 @@
     N.showMemberPrompt = (feature = 'Nexus') => N.isSignedIn ? openProPanel(N, feature) : openAccountPanel(N, feature);
     N.openDigitBoxProfile = () => N.isSignedIn ? openProfilePanel(N) : openAccountPanel(N);
 
-    refresh(N, true);
+    syncCurrentDigitBoxSession(N).finally(() => refresh(N, true));
     if (isDigitBoxPage()) {
+      // Keep checking for a short burst even after sign-in. A Stripe Checkout
+      // redirect can return before the webhook updates the subscription row,
+      // so stopping as soon as "signed in" is detected causes false Free users.
+      let attempts = 0;
       const poll = setInterval(async () => {
+        attempts += 1;
+        await syncCurrentDigitBoxSession(N);
         await refresh(N, true);
-        if (N.isSignedIn) clearInterval(poll);
-      }, 1500);
+        if (N.accountTier === 'pro' || attempts >= 18) clearInterval(poll);
+      }, 1800);
       window.addEventListener('pagehide', () => clearInterval(poll), { once: true });
+
+      window.addEventListener('storage', event => {
+        if (event.key === WEBSITE_STORAGE_KEY) syncCurrentDigitBoxSession(N).then(() => refresh(N, true));
+      });
     }
 
     window.addEventListener('focus', () => refresh(N, true));
@@ -55,7 +67,30 @@
   }
 
   function hasPro(entitlements) {
-    return Array.isArray(entitlements?.features) && entitlements.features.includes('nexus_pro');
+    if (!entitlements || typeof entitlements !== 'object') return false;
+    const features = Array.isArray(entitlements.features) ? entitlements.features : [];
+    const plan = String(entitlements.plan || entitlements.tier || '').toLowerCase();
+    const status = String(entitlements.subscriptionStatus || entitlements.status || '').toLowerCase();
+    return features.includes('nexus_pro') || plan === 'pro' || PRO_STATUSES.has(status);
+  }
+
+  async function syncCurrentDigitBoxSession(N) {
+    if (!isDigitBoxPage()) return null;
+    try {
+      const raw = localStorage.getItem(WEBSITE_STORAGE_KEY);
+      if (!raw) return null;
+      const session = JSON.parse(raw);
+      if (!session?.token) return null;
+      const result = await N.msg({
+        type: 'nexus:digitbox-import',
+        token: session.token,
+        expiresAt: Number(session.expiresAt) || 0,
+      });
+      if (result?.signedIn) applyStatus(N, result);
+      return result;
+    } catch {
+      return null;
+    }
   }
 
   async function refresh(N, force = false) {
