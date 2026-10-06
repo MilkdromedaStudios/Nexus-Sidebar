@@ -49,7 +49,13 @@
   let initializing = false;
 
   function hasPro(entitlements) {
-    return Array.isArray(entitlements?.features) && entitlements.features.includes('nexus_pro');
+    if (!entitlements || typeof entitlements !== 'object') return false;
+    const features = Array.isArray(entitlements.features) ? entitlements.features : [];
+    const plan = String(entitlements.plan || entitlements.tier || '').toLowerCase();
+    const status = String(entitlements.subscriptionStatus || entitlements.status || '').toLowerCase();
+    return features.includes('nexus_pro') ||
+      plan === 'pro' ||
+      ['active', 'trialing', 'past_due'].includes(status);
   }
 
   async function checkDigitBox(force = false) {
