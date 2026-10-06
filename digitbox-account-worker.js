@@ -7,7 +7,8 @@ const DIGITBOX = {
   profile: 'https://digitbox.dev/profile',
   storageKey: 'nexusDigitBoxAuth',
   websiteStorageKey: 'digitbox-deepforge-auth-v1',
-  maxAge: 30 * 1000,
+  maxAge: 15 * 1000,
+  proGraceAge: 10 * 60 * 1000,
 };
 
 const dbGet = defaults => new Promise(resolve => chrome.storage.local.get(defaults, value => resolve(value || defaults)));
@@ -18,13 +19,27 @@ function freeEntitlements() {
   return { plan: 'free', features: [], subscriptionStatus: 'none', cancelAtPeriodEnd: false, currentPeriodEnd: null };
 }
 
+const PRO_STATUSES = new Set(['active', 'trialing', 'past_due']);
+
+function entitlementLooksPro(value) {
+  const entitlements = value && typeof value === 'object' ? value : {};
+  const features = Array.isArray(entitlements.features) ? entitlements.features : [];
+  const plan = String(entitlements.plan || entitlements.tier || '').toLowerCase();
+  const status = String(entitlements.subscriptionStatus || entitlements.status || '').toLowerCase();
+  return features.includes('nexus_pro') || plan === 'pro' || PRO_STATUSES.has(status);
+}
+
 function normalizeEntitlements(value) {
   const entitlements = value && typeof value === 'object' ? value : freeEntitlements();
-  const features = Array.isArray(entitlements.features) ? entitlements.features.filter(x => typeof x === 'string') : [];
+  const features = Array.isArray(entitlements.features)
+    ? entitlements.features.filter(x => typeof x === 'string')
+    : [];
+  const pro = entitlementLooksPro(entitlements);
+  if (pro && !features.includes('nexus_pro')) features.push('nexus_pro');
   return {
-    plan: features.includes('nexus_pro') ? 'pro' : 'free',
+    plan: pro ? 'pro' : 'free',
     features,
-    subscriptionStatus: String(entitlements.subscriptionStatus || 'none'),
+    subscriptionStatus: String(entitlements.subscriptionStatus || entitlements.status || 'none'),
     cancelAtPeriodEnd: !!entitlements.cancelAtPeriodEnd,
     currentPeriodEnd: Number(entitlements.currentPeriodEnd) || null,
   };
@@ -45,22 +60,66 @@ async function validateToken(token, expiresAt = 0) {
   token = String(token || '').trim();
   if (!token) return null;
   if (Number(expiresAt) && Number(expiresAt) <= Date.now()) return null;
+
+  // Authentication is authoritative: only an auth failure signs the user out.
+  // Billing/profile failures are handled separately so a brief network hiccup
+  // cannot incorrectly turn a real Pro subscriber into Guest mode.
+  let account;
   try {
-    const account = await requestJson('/v1/auth/me', token);
-    const profile = await requestJson('/v1/profile/me', token).catch(() => ({ user: {} }));
-    const billing = await requestJson('/v1/billing/status', token).catch(() => ({ entitlements: freeEntitlements() }));
-    const user = { ...(account?.user || {}), ...(profile?.user || {}) };
-    if (!user.id) return null;
-    const entitlements = normalizeEntitlements(billing?.entitlements);
-    const auth = { token, expiresAt: Number(expiresAt) || 0, user, entitlements, checkedAt: Date.now() };
-    await dbSet({ [DIGITBOX.storageKey]: auth });
-    broadcast(auth);
-    return auth;
+    account = await requestJson('/v1/auth/me', token);
   } catch {
     await dbRemove(DIGITBOX.storageKey);
     broadcast(null);
     return null;
   }
+
+  const saved = (await dbGet({ [DIGITBOX.storageKey]: null }))[DIGITBOX.storageKey];
+  const sameSavedToken = saved?.token === token ? saved : null;
+  const profile = await requestJson('/v1/profile/me', token).catch(() => ({ user: sameSavedToken?.user || {} }));
+
+  let billing = null;
+  let billingError = null;
+  for (const delay of [0, 250, 900]) {
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+    try {
+      billing = await requestJson('/v1/billing/status', token);
+      break;
+    } catch (error) {
+      billingError = error;
+    }
+  }
+
+  const user = { ...(account?.user || {}), ...(profile?.user || {}) };
+  if (!user.id) return null;
+
+  let entitlements;
+  let billingCheckedAt = Number(sameSavedToken?.billingCheckedAt || 0);
+  let billingReachable = !!billing;
+  if (billing) {
+    entitlements = normalizeEntitlements(billing.entitlements);
+    billingCheckedAt = Date.now();
+  } else {
+    const savedEntitlements = normalizeEntitlements(sameSavedToken?.entitlements);
+    const savedProStillFresh =
+      entitlementLooksPro(savedEntitlements) &&
+      billingCheckedAt > 0 &&
+      Date.now() - billingCheckedAt < DIGITBOX.proGraceAge;
+    entitlements = savedProStillFresh ? savedEntitlements : freeEntitlements();
+  }
+
+  const auth = {
+    token,
+    expiresAt: Number(expiresAt) || 0,
+    user,
+    entitlements: normalizeEntitlements(entitlements),
+    checkedAt: Date.now(),
+    billingCheckedAt,
+    billingReachable,
+    billingError: billingError?.message || '',
+  };
+  await dbSet({ [DIGITBOX.storageKey]: auth });
+  broadcast(auth);
+  return auth;
 }
 
 function isDigitBoxUrl(raw) {
@@ -112,6 +171,8 @@ function signedInStatus(auth) {
     user: auth.user,
     entitlements: normalizeEntitlements(auth.entitlements),
     expiresAt: auth.expiresAt || 0,
+    billingReachable: auth.billingReachable !== false,
+    billingCheckedAt: Number(auth.billingCheckedAt) || 0,
   };
 }
 
@@ -204,11 +265,20 @@ async function refreshFromDigitBoxTab(tabId) {
   if (!auth) await status(true);
 }
 
+function scheduleDigitBoxRefresh(tabId, rawUrl = '') {
+  const url = String(rawUrl || '');
+  const paymentReturn = /[?&]billing=success(?:&|$)/i.test(url);
+  const delays = paymentReturn ? [0, 700, 1800, 4000, 8000, 15000] : [0, 900, 3000];
+  for (const delay of delays) {
+    setTimeout(() => refreshFromDigitBoxTab(tabId).catch(() => {}), delay);
+  }
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (!isDigitBoxUrl(changeInfo.url || tab?.url)) return;
+  const url = changeInfo.url || tab?.url || '';
+  if (!isDigitBoxUrl(url)) return;
   if (changeInfo.url || changeInfo.status === 'complete') {
-    refreshFromDigitBoxTab(tabId).catch(() => {});
-    setTimeout(() => refreshFromDigitBoxTab(tabId).catch(() => {}), 900);
+    scheduleDigitBoxRefresh(tabId, url);
   }
 });
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
