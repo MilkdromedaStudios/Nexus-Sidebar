@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nexus Sidebar: All your needs in one place",
-  "version": "17.4.1",
+  "version": "17.4.2",
   "description": "Browser productivity workspace with DigitBox Pro subscriptions, Guest/Free access, dynamic sidebar layout, universal commands, resizable panels and Liquid Glass.",
   "author": "Numberstring Productions",
   "permissions": [
