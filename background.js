@@ -1,5 +1,5 @@
 'use strict';
-importScripts('service-worker.js', 'pomodoro-worker.js', 'update-v2-worker.js', 'next-level-worker.js', 'next-level-extras-worker.js', 'next-level-persistence.js', 'next-level-label-worker.js', 'interaction-worker.js', 'digitbox-account-worker.js');
+importScripts('service-worker.js', 'pomodoro-worker.js', 'update-v2-worker.js', 'next-level-worker.js', 'next-level-extras-worker.js', 'next-level-persistence.js', 'next-level-label-worker.js', 'interaction-worker.js', 'digitbox-account-worker.js', 'nexus-ai-worker.js');
 
 chrome.action.onClicked.addListener(async tab => {
   if (!tab?.id || !/^(https?|file):/i.test(tab.url || '')) return;
