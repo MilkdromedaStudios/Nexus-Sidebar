@@ -78,7 +78,8 @@
         "styles/panel-resize.css",
         "styles/account-widget.css",
         "styles/sidebar-shortcuts.css",
-        "styles/dynamic-rail-layout.css"
+        "styles/dynamic-rail-layout.css",
+        "styles/nexus-ai.css"
       ],
       "js": [
         "src/core.js",
@@ -102,7 +103,8 @@
         "src/digitbox-account.js",
         "src/sidebar-shortcuts.js",
         "src/dynamic-rail-layout.js",
-        "src/account-ui-polish.js"
+        "src/account-ui-polish.js",
+        "src/nexus-ai.js"
       ],
       "run_at": "document_start",
       "all_frames": false,
